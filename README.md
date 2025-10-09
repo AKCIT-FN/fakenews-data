@@ -15,6 +15,8 @@ This package provides tools for collecting, normalizing, cleaning, and analyzing
 
 ## Installation
 
+### From PyPI (when published)
+
 ```bash
 # Using pip
 pip install fakenews-br-data
@@ -23,14 +25,26 @@ pip install fakenews-br-data
 uv pip install fakenews-br-data
 ```
 
-For development with HuggingFace support:
+### From GitHub (current method)
 
 ```bash
 # Using pip
-pip install fakenews-br-data[huggingface]
+pip install git+https://github.com/kauandivino/fakenews-data.git
 
-# Using uv
+# Using uv (recommended)
+uv pip install git+https://github.com/kauandivino/fakenews-data.git
+```
+
+### For development with HuggingFace support:
+
+```bash
+# From PyPI (when published)
+pip install fakenews-br-data[huggingface]
 uv pip install fakenews-br-data[huggingface]
+
+# From GitHub (current)
+pip install "git+https://github.com/kauandivino/fakenews-data.git#egg=fakenews-br-data[huggingface]"
+uv pip install "git+https://github.com/kauandivino/fakenews-data.git#egg=fakenews-br-data[huggingface]"
 ```
 
 ## Quick Start

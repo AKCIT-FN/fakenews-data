@@ -41,6 +41,6 @@ huggingface = ["gdown>=5.0.0"]
 fakenews-br-data = "fakenews_br_data.cli:main"
 
 [project.urls]
-Homepage = "https://github.com/USERNAME/fakenews-br-data"
-Issues = "https://github.com/USERNAME/fakenews-br-data/issues"
+Homepage = "https://github.com/kauandivino/fakenews-data"
+Issues = "https://github.com/kauandivino/fakenews-data/issues"
 
