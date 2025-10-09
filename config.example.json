@@ -1,0 +1,16 @@
+{
+  "factcheck_api_key": "YOUR_GOOGLE_FACTCHECK_API_KEY",
+  "out_dir": "data",
+  "max_workers": 31,
+  "factcheck_sleep": 1,
+  "max_inflight": 200,
+  "min_tokens": 5,
+  "deduplication": {
+    "threshold": 0.7,
+    "ngram": 5,
+    "seed": 3,
+    "num_perm": 128,
+    "bands": 50
+  }
+}
+

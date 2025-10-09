@@ -1,0 +1,46 @@
+[build-system]
+requires = ["hatchling >= 1.26"]
+build-backend = "hatchling.build"
+
+[project]
+name = "fakenews-br-data"
+version = "0.1.0"
+authors = [
+  { name="Victor Emanuel", email="author@example.com" },
+]
+description = "Brazilian fake news dataset collection, processing, and analysis toolkit"
+readme = "README.md"
+requires-python = ">=3.9"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Operating System :: OS Independent",
+    "Topic :: Scientific/Engineering :: Information Analysis",
+]
+license = "MIT"
+dependencies = [
+    "pandas>=2.0.0",
+    "datasets>=4.0.0",
+    "pyarrow>=10.0.0",
+    "fastparquet>=2024.0.0",
+    "requests>=2.28.0",
+    "demoji>=1.1.0",
+    "urlextract>=1.9.0",
+    "datasketch>=1.6.0",
+    "tqdm>=4.60.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=7.0", "black>=23.0", "ruff>=0.1.0"]
+huggingface = ["gdown>=5.0.0"]
+
+[project.scripts]
+fakenews-br-data = "fakenews_br_data.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/USERNAME/fakenews-br-data"
+Issues = "https://github.com/USERNAME/fakenews-br-data/issues"
+
