@@ -1,66 +1,80 @@
 # fakenews-br-data
 
-Brazilian fake news dataset collection, processing, and analysis toolkit.
+Kit de ferramentas para coleta, processamento e análise de datasets de fake news brasileiras.
 
-This package provides tools for collecting, normalizing, cleaning, and analyzing Brazilian Portuguese fake news datasets from multiple sources including HuggingFace, Zenodo, and local files.
+Este pacote fornece ferramentas para coletar, normalizar, limpar e analisar datasets de fake news em português brasileiro de múltiplas fontes, incluindo HuggingFace, Zenodo e arquivos locais.
 
-## Features
+## Características
 
-- Download datasets from multiple sources (HuggingFace, Zenodo, GitHub, local files)
-- Normalize schemas across different dataset formats
-- Clean and preprocess text data (remove URLs, emojis, normalize accents)
-- Detect near-duplicate content using MinHash LSH
-- Integrate with Google Fact Check API for verification
-- Both library API and command-line interface
+- Download de datasets de múltiplas fontes (HuggingFace, Zenodo, GitHub, arquivos locais)
+- Normalização de esquemas entre diferentes formatos de dataset
+- Limpeza e pré-processamento de dados de texto (remover URLs, emojis, normalizar acentos)
+- Detecção de conteúdo quase-duplicado usando MinHash LSH
+- Integração com Google Fact Check API para verificação
+- Interface de biblioteca e linha de comando
 
-## Installation
+## Instalação
 
-### From PyPI (when published)
+### Do TestPyPI (atual)
 
 ```bash
-# Using pip
+# Usando pip
+pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ fakenews-br-data
+
+# Usando uv (recomendado)
+uv pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ fakenews-br-data
+```
+
+### Do PyPI (quando publicado)
+
+```bash
+# Usando pip
 pip install fakenews-br-data
 
-# Using uv (recommended)
+# Usando uv (recomendado)
 uv pip install fakenews-br-data
 ```
 
-### From GitHub (current method)
+### Do GitHub (método atual)
 
 ```bash
-# Using pip
+# Usando pip
 pip install git+https://github.com/kauandivino/fakenews-data.git
 
-# Using uv (recommended)
+# Usando uv (recomendado)
 uv pip install git+https://github.com/kauandivino/fakenews-data.git
 ```
 
-### For development with HuggingFace support:
+### Para desenvolvimento com suporte ao HuggingFace:
 
 ```bash
-# From PyPI (when published)
+# Do TestPyPI (atual)
+pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ "fakenews-br-data[huggingface]"
+uv pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ "fakenews-br-data[huggingface]"
+
+# Do PyPI (quando publicado)
 pip install fakenews-br-data[huggingface]
 uv pip install fakenews-br-data[huggingface]
 
-# From GitHub (current)
+# Do GitHub (atual)
 pip install "git+https://github.com/kauandivino/fakenews-data.git#egg=fakenews-br-data[huggingface]"
 uv pip install "git+https://github.com/kauandivino/fakenews-data.git#egg=fakenews-br-data[huggingface]"
 ```
 
-## Quick Start
+## Início Rápido
 
-### Library Usage
+### Uso da Biblioteca
 
 ```python
 from fakenews_br_data import Pipeline, DatasetCleaner
 
-# Full pipeline
+# Pipeline completo
 pipeline = Pipeline(config_path="config.json")
 pipeline.download()
 pipeline.process()
 df_clean = pipeline.clean()
 
-# Or use individual components
+# Ou usar componentes individuais
 from fakenews_br_data import DatasetCleaner, DuplicateDetector, FactChecker
 
 cleaner = DatasetCleaner(min_tokens=5)
@@ -69,70 +83,70 @@ df_clean = cleaner.clean_dataset("input.csv", "output_clean.csv")
 detector = DuplicateDetector(threshold=0.7)
 duplicates = detector.find_near_duplicates(texts)
 
-checker = FactChecker(api_key="YOUR_KEY")
+checker = FactChecker(api_key="SUA_CHAVE")
 results = checker.check_claims(df)
 ```
 
-### CLI Usage
+### Uso da CLI
 
 ```bash
-# Run full pipeline
+# Executar pipeline completo
 fakenews-br-data pipeline --config config.json --output ./data
 
-# Individual commands
+# Comandos individuais
 fakenews-br-data clean --input merged.csv --output clean.csv
 fakenews-br-data factcheck --input clean.csv --config config.json
 ```
 
-## Configuration
+## Configuração
 
-Create a `config.json` file with your settings:
+Crie um arquivo `config.json` com suas configurações:
 
 ```json
 {
-  "factcheck_api_key": "YOUR_GOOGLE_FACTCHECK_API_KEY",
+  "factcheck_api_key": "SUA_CHAVE_API_GOOGLE_FACTCHECK",
   "out_dir": "data",
   "max_workers": 31,
   "factcheck_sleep": 1
 }
 ```
 
-See `config.example.json` for a template.
+Veja `config.example.json` para um template.
 
-## Dataset Sources
+## Fontes de Datasets
 
-This toolkit supports multiple Brazilian Portuguese fake news datasets:
+Este kit de ferramentas suporta múltiplos datasets de fake news em português brasileiro:
 
-- **MuMiN-PT**: Portuguese subset of MuMiN (Multimodal Misinformation)
-- **COVID19.BR**: COVID-19 fact-checks and news
-- **Fake.br**: Processed Fake.br dataset
-- **FakeTweetBr**: Labeled Portuguese tweets
-- **FakeWhatsAppBR**: WhatsApp messages from 2018
-- **Kaggle datasets**: True and fake news collections
-- **LLM4BR**: 300 filtered news articles
+- **MuMiN-PT**: Subconjunto português do MuMiN (Multimodal Misinformation)
+- **COVID19.BR**: Fact-checks e notícias sobre COVID-19
+- **Fake.br**: Dataset Fake.br processado
+- **FakeTweetBr**: Tweets em português rotulados
+- **FakeWhatsAppBR**: Mensagens do WhatsApp de 2018
+- **Datasets do Kaggle**: Coleções de notícias verdadeiras e falsas
+- **LLM4BR**: 300 artigos de notícias filtrados
 
-## Development
+## Desenvolvimento
 
-### Using uv (recommended)
+### Usando uv (recomendado)
 
 ```bash
 git clone https://github.com/kauandivino/fakenews-data.git
 cd fakenews-data
 
-# Install uv if you haven't already
+# Instalar uv se ainda não tiver
 curl -LsSf https://astral.sh/uv/install.sh | sh
 
-# Install in development mode
+# Instalar em modo de desenvolvimento
 uv pip install -e .[dev]
 
-# Build the package
+# Build do pacote
 uv build
 
-# Publish to PyPI (requires PyPI token)
+# Publicar no PyPI (requer token do PyPI)
 uv publish
 ```
 
-### Using pip
+### Usando pip
 
 ```bash
 git clone https://github.com/kauandivino/fakenews-data.git
@@ -140,13 +154,13 @@ cd fakenews-data
 pip install -e .[dev]
 ```
 
-## License
+## Licença
 
-MIT License - see LICENSE file for details.
+Licença MIT - veja arquivo LICENSE para detalhes.
 
-## Citation
+## Citação
 
-If you use this toolkit in your research, please cite:
+Se você usar este kit de ferramentas em sua pesquisa, por favor cite:
 
 ```
 @software{fakenews_br_data,
@@ -157,6 +171,6 @@ If you use this toolkit in your research, please cite:
 }
 ```
 
-## Acknowledgments
+## Agradecimentos
 
-This toolkit aggregates and processes datasets from multiple sources. Please cite the original dataset authors when using their data.
+Este kit de ferramentas agrega e processa datasets de múltiplas fontes. Por favor, cite os autores originais dos datasets ao usar seus dados.
