@@ -102,8 +102,8 @@ This toolkit supports multiple Brazilian Portuguese fake news datasets:
 ### Using uv (recommended)
 
 ```bash
-git clone https://github.com/USERNAME/fakenews-br-data.git
-cd fakenews-br-data
+git clone https://github.com/kauandivino/fakenews-data.git
+cd fakenews-data
 
 # Install uv if you haven't already
 curl -LsSf https://astral.sh/uv/install.sh | sh
@@ -121,8 +121,8 @@ uv publish
 ### Using pip
 
 ```bash
-git clone https://github.com/USERNAME/fakenews-br-data.git
-cd fakenews-br-data
+git clone https://github.com/kauandivino/fakenews-data.git
+cd fakenews-data
 pip install -e .[dev]
 ```
 
@@ -139,11 +139,10 @@ If you use this toolkit in your research, please cite:
   title = {fakenews-br-data: Brazilian Fake News Dataset Toolkit},
   author = {Victor Emanuel},
   year = {2025},
-  url = {https://github.com/USERNAME/fakenews-br-data}
+  url = {https://github.com/kauandivino/fakenews-data}
 }
 ```
 
 ## Acknowledgments
 
 This toolkit aggregates and processes datasets from multiple sources. Please cite the original dataset authors when using their data.
-
