@@ -61,6 +61,33 @@ pip install "git+https://github.com/kauandivino/fakenews-data.git#egg=fakenews-b
 uv pip install "git+https://github.com/kauandivino/fakenews-data.git#egg=fakenews-br-data[huggingface]"
 ```
 
+## Estrutura do Projeto
+
+```
+fakenews-data/
+├── 📄 README.md                    # Este arquivo - documentação principal
+├── 📄 LICENSE                      # Licença MIT
+├── ⚙️ pyproject.toml               # Configuração do pacote Python
+├── ⚙️ config.example.json          # Template de configuração
+├── 📦 src/fakenews_br_data/        # Código fonte principal
+│   ├── __init__.py                 # API pública do pacote
+│   ├── pipeline.py                 # Pipeline principal de processamento
+│   ├── cleaning.py                 # Limpeza e pré-processamento de texto
+│   ├── deduplication.py            # Detecção de duplicatas (MinHash LSH)
+│   ├── factcheck.py                # Integração com Google Fact Check API
+│   ├── downloaders.py              # Downloaders (HF, Zenodo, URL, Local)
+│   ├── schema.py                   # Normalização de esquemas
+│   ├── config.py                   # Gerenciamento de configuração
+│   ├── utils.py                    # Funções utilitárias
+│   └── cli.py                      # Interface de linha de comando
+├── 🧪 tests/                       # Testes (estrutura básica)
+│   └── __init__.py
+├── 📊 Dataset_combinado_adicionado_(Semana_15_09).ipynb  # Notebook original
+└── 📦 dist/                        # Arquivos de distribuição (gerados)
+    ├── fakenews_br_data-0.1.1-py3-none-any.whl
+    └── fakenews_br_data-0.1.1.tar.gz
+```
+
 ## Início Rápido
 
 ### Uso da Biblioteca
@@ -107,11 +134,20 @@ Crie um arquivo `config.json` com suas configurações:
   "factcheck_api_key": "SUA_CHAVE_API_GOOGLE_FACTCHECK",
   "out_dir": "data",
   "max_workers": 31,
-  "factcheck_sleep": 1
+  "factcheck_sleep": 1,
+  "max_inflight": 200,
+  "min_tokens": 5,
+  "deduplication": {
+    "threshold": 0.7,
+    "ngram": 5,
+    "seed": 3,
+    "num_perm": 128,
+    "bands": 50
+  }
 }
 ```
 
-Veja `config.example.json` para um template.
+Veja `config.example.json` para um template completo.
 
 ## Fontes de Datasets
 
@@ -154,6 +190,27 @@ cd fakenews-data
 pip install -e .[dev]
 ```
 
+## API Pública
+
+O pacote exporta as seguintes classes e funções principais:
+
+### Classes Principais
+- `Pipeline` - Orquestração principal do pipeline completo
+- `DatasetCleaner` - Limpeza e pré-processamento de texto
+- `DuplicateDetector` - Detecção de conteúdo quase-duplicado
+- `FactChecker` - Integração com Google Fact Check API
+
+### Downloaders
+- `HuggingFaceDownloader` - Download de datasets do HuggingFace
+- `ZenodoDownloader` - Download de datasets do Zenodo
+- `URLDownloader` - Download de arquivos via URL
+- `LocalFileLoader` - Carregamento de arquivos locais
+
+### Utilitários
+- `load_config`, `save_config` - Gerenciamento de configuração
+- `ensure_schema`, `normalize_date` - Utilitários de esquema
+- `sha256`, `download_to` - Funções utilitárias gerais
+
 ## Licença
 
 Licença MIT - veja arquivo LICENSE para detalhes.
@@ -174,3 +231,9 @@ Se você usar este kit de ferramentas em sua pesquisa, por favor cite:
 ## Agradecimentos
 
 Este kit de ferramentas agrega e processa datasets de múltiplas fontes. Por favor, cite os autores originais dos datasets ao usar seus dados.
+
+## Links Úteis
+
+- **GitHub:** https://github.com/kauandivino/fakenews-data
+- **TestPyPI:** https://test.pypi.org/project/fakenews-br-data/
+- **PyPI:** https://pypi.org/project/fakenews-br-data/ (quando publicado)
