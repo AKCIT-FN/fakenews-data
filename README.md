@@ -228,15 +228,12 @@ Se você usar este framework em sua pesquisa, por favor cite:
 }
 ```
 
-<<<<<<< HEAD
 ## Agradecimentos
 
-Este kit de ferramentas agrega e processa datasets de múltiplas fontes. Por favor, cite os autores originais dos datasets ao usar seus dados.
+Este framework agrega e processa datasets de múltiplas fontes. Por favor, cite os autores originais dos datasets ao usar seus dados.
 
 ## Links Úteis
 
 - **GitHub:** https://github.com/kauandivino/fakenews-data
 - **TestPyPI:** https://test.pypi.org/project/fakenews-br-data/
 - **PyPI:** https://pypi.org/project/fakenews-br-data/ (quando publicado)
-=======
->>>>>>> efe32677c8f22344fdf9b37acf9de46e701801a9
