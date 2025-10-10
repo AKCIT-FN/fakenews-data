@@ -321,4 +321,18 @@ class Pipeline:
             print(f"  {key}: {path}")
         
         return results
+    
+if __name__ == "__main__":
+    print("Iniciando o pipeline completo...\n")
+
+    pipeline = Pipeline(config_path="config.json")
+
+    results = pipeline.run_full_pipeline(skip_download=False)
+
+    print("\nExecução concluída!")
+    print("Resultados:")
+    for key, value in results.items():
+        print(f"{key}: {value}")
+
+
 
