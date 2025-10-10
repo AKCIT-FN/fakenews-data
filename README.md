@@ -1,6 +1,6 @@
 # fakenews-br-data
 
-Framework para coleta, processamento e análise de datasets de fake news.
+Framework para coleta, processamento e análise de datasets de fake news brasileiras.
 
 Este pacote fornece ferramentas para coletar, normalizar, limpar e analisar datasets de fake news em português brasileiro de múltiplas fontes, incluindo HuggingFace, Zenodo e arquivos locais.
 
@@ -15,50 +15,18 @@ Este pacote fornece ferramentas para coletar, normalizar, limpar e analisar data
 
 ## Instalação
 
-### Do TestPyPI (atual)
-
+### Instalação básica (recomendada)
 ```bash
-# Usando pip
 pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ fakenews-br-data
-
-# Usando uv (recomendado)
-uv pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ fakenews-br-data
 ```
 
-### Do PyPI (quando publicado)
-
+### Instalação com funcionalidades extras
 ```bash
-# Usando pip
-pip install fakenews-br-data
-
-# Usando uv (recomendado)
-uv pip install fakenews-br-data
-```
-
-### Do GitHub (método atual)
-
-```bash
-# Usando pip
-pip install git+https://github.com/kauandivino/fakenews-data.git
-
-# Usando uv (recomendado)
-uv pip install git+https://github.com/kauandivino/fakenews-data.git
-```
-
-### Para desenvolvimento com suporte ao HuggingFace:
-
-```bash
-# Do TestPyPI (atual)
+# Com suporte ao Google Drive
 pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ "fakenews-br-data[huggingface]"
-uv pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ "fakenews-br-data[huggingface]"
 
-# Do PyPI (quando publicado)
-pip install fakenews-br-data[huggingface]
-uv pip install fakenews-br-data[huggingface]
-
-# Do GitHub (atual)
-pip install "git+https://github.com/kauandivino/fakenews-data.git#egg=fakenews-br-data[huggingface]"
-uv pip install "git+https://github.com/kauandivino/fakenews-data.git#egg=fakenews-br-data[huggingface]"
+# Para desenvolvimento (testes, formatação de código)
+pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ "fakenews-br-data[dev]"
 ```
 
 ## Estrutura do Projeto
@@ -84,8 +52,8 @@ fakenews-data/
 │   └── __init__.py
 ├── 📊 Dataset_combinado_adicionado_(Semana_15_09).ipynb  # Notebook original
 └── 📦 dist/                        # Arquivos de distribuição (gerados)
-    ├── fakenews_br_data-0.1.1-py3-none-any.whl
-    └── fakenews_br_data-0.1.1.tar.gz
+    ├── fakenews_br_data-0.1.3-py3-none-any.whl
+    └── fakenews_br_data-0.1.3.tar.gz
 ```
 
 ## Início Rápido
@@ -114,7 +82,7 @@ checker = FactChecker(api_key="SUA_CHAVE")
 results = checker.check_claims(df)
 ```
 
-### Uso da CLI
+### Uso da CLI (linha de comando)
 
 ```bash
 # Executar pipeline completo
@@ -151,7 +119,7 @@ Veja `config.example.json` para um template completo.
 
 ## Fontes de Datasets
 
-Este kit de ferramentas suporta múltiplos datasets de fake news em português brasileiro:
+Este framework suporta múltiplos datasets de fake news em português brasileiro:
 
 - **MuMiN-PT**: Subconjunto português do MuMiN (Multimodal Misinformation)
 - **COVID19.BR**: Fact-checks e notícias sobre COVID-19
@@ -161,38 +129,7 @@ Este kit de ferramentas suporta múltiplos datasets de fake news em português b
 - **Datasets do Kaggle**: Coleções de notícias verdadeiras e falsas
 - **LLM4BR**: 300 artigos de notícias filtrados
 
-## Desenvolvimento
-
-### Usando uv (recomendado)
-
-```bash
-git clone https://github.com/kauandivino/fakenews-data.git
-cd fakenews-data
-
-# Instalar uv se ainda não tiver
-curl -LsSf https://astral.sh/uv/install.sh | sh
-
-# Instalar em modo de desenvolvimento
-uv pip install -e .[dev]
-
-# Build do pacote
-uv build
-
-# Publicar no PyPI (requer token do PyPI)
-uv publish
-```
-
-### Usando pip
-
-```bash
-git clone https://github.com/kauandivino/fakenews-data.git
-cd fakenews-data
-pip install -e .[dev]
-```
-
 ## API Pública
-
-O pacote exporta as seguintes classes e funções principais:
 
 ### Classes Principais
 - `Pipeline` - Orquestração principal do pipeline completo
@@ -210,6 +147,22 @@ O pacote exporta as seguintes classes e funções principais:
 - `load_config`, `save_config` - Gerenciamento de configuração
 - `ensure_schema`, `normalize_date` - Utilitários de esquema
 - `sha256`, `download_to` - Funções utilitárias gerais
+
+## Desenvolvimento
+
+```bash
+git clone https://github.com/kauandivino/fakenews-data.git
+cd fakenews-data
+
+# Instalar em modo de desenvolvimento
+pip install -e .[dev]
+
+# Build do pacote
+uv build
+
+# Publicar no PyPI (requer token do PyPI)
+uv publish
+```
 
 ## Licença
 
