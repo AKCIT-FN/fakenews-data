@@ -164,10 +164,6 @@ uv build
 uv publish
 ```
 
-## Licença
-
-Licença MIT - veja arquivo LICENSE para detalhes.
-
 ## Citação
 
 Se você usar este framework em sua pesquisa, por favor cite:
@@ -185,8 +181,3 @@ Se você usar este framework em sua pesquisa, por favor cite:
 
 Este framework agrega e processa datasets de múltiplas fontes. Por favor, cite os autores originais dos datasets ao usar seus dados.
 
-## Links Úteis
-
-- **GitHub:** https://github.com/kauandivino/fakenews-data
-- **TestPyPI:** https://test.pypi.org/project/fakenews-br-data/
-- **PyPI:** https://pypi.org/project/fakenews-br-data/ (quando publicado)
