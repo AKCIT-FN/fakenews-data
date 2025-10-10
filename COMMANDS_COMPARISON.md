@@ -176,13 +176,13 @@ Você pode usar uv em um projeto e pip em outro, ou misturar ambos no mesmo proj
 
 ## Recomendação
 
-🚀 **Use uv se você quer:**
+**Use uv se você quer:**
 - Velocidade máxima
 - Comandos simplificados
 - Gerenciamento de versão integrado
 - Menos ferramentas para instalar
 
-🐌 **Use pip/build/twine se você:**
+**Use pip/build/twine se você:**
 - Prefere ferramentas tradicionais
 - Trabalha em ambiente com restrições
 - Precisa de máxima estabilidade garantida
