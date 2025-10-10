@@ -1,6 +1,6 @@
 # fakenews-br-data
 
-Kit de ferramentas para coleta, processamento e análise de datasets de fake news brasileiras.
+Framework para coleta, processamento e análise de datasets de fake news.
 
 Este pacote fornece ferramentas para coletar, normalizar, limpar e analisar datasets de fake news em português brasileiro de múltiplas fontes, incluindo HuggingFace, Zenodo e arquivos locais.
 
@@ -160,17 +160,14 @@ Licença MIT - veja arquivo LICENSE para detalhes.
 
 ## Citação
 
-Se você usar este kit de ferramentas em sua pesquisa, por favor cite:
+Se você usar este framework em sua pesquisa, por favor cite:
 
 ```
 @software{fakenews_br_data,
-  title = {fakenews-br-data: Brazilian Fake News Dataset Toolkit},
-  author = {Victor Emanuel},
+  title = {fakenews-br-data: Brazilian Fake News Dataset Framework},
+  author = {Kauan Divino Pouso Mariano, Fabrycio Leite Nakano Almada, Maykon Adriell Dutra,  Victor Emanuel da Silva Monteiro, Juliana Resplande Sant'Anna Gomes},
   year = {2025},
   url = {https://github.com/kauandivino/fakenews-data}
 }
 ```
 
-## Agradecimentos
-
-Este kit de ferramentas agrega e processa datasets de múltiplas fontes. Por favor, cite os autores originais dos datasets ao usar seus dados.
