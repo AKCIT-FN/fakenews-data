@@ -3,18 +3,19 @@
 import os
 from typing import List, Optional, Dict, Any
 import pandas as pd
-from .config import load_config
-from .downloaders import (
+
+from fakenews_br_data.config import load_config
+from fakenews_br_data.downloaders import (
     HuggingFaceDownloader,
     ZenodoDownloader,
     URLDownloader,
     LocalFileLoader,
 )
-from .schema import ensure_schema, assign_uids, extract_tweet_id
-from .cleaning import DatasetCleaner
-from .deduplication import DuplicateDetector
-from .factcheck import FactChecker
-from .utils import save_manifest
+from fakenews_br_data.schema import ensure_schema, assign_uids, extract_tweet_id
+from fakenews_br_data.cleaning import DatasetCleaner
+from fakenews_br_data.deduplication import DuplicateDetector
+from fakenews_br_data.factcheck import FactChecker
+from fakenews_br_data.utils import save_manifest
 
 
 class Pipeline:
