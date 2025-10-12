@@ -1,35 +1,25 @@
 # fakenews-br-data
 
-Framework para coleta, processamento e análise de datasets de fake news brasileiras.
+_Framework_ para coleta, processamento e análise de _datasets_ de desinformação com enfoque no contexto brasileiro:
 
-Este pacote fornece ferramentas para coletar, normalizar, limpar e analisar datasets de fake news em português brasileiro de múltiplas fontes, incluindo HuggingFace, Zenodo e arquivos locais.
 
-## Características
-
-- Download de datasets de múltiplas fontes (HuggingFace, Zenodo, GitHub, arquivos locais)
-- Normalização de esquemas entre diferentes formatos de dataset
+- Interface de biblioteca e linha de comando
 - Limpeza e pré-processamento de dados de texto (remover URLs, emojis, normalizar acentos)
 - Detecção de conteúdo quase-duplicado usando MinHash LSH
 - Integração com Google Fact Check API para verificação
-- Interface de biblioteca e linha de comando
 
 ## Instalação
 
-### Instalação básica (recomendada)
 ```bash
-pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ fakenews-br-data
+pip install git+https://github.com/kauandivino/fakenews-data
 ```
 
-### Instalação com funcionalidades extras
-```bash
-# Com suporte ao Google Drive
-pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ "fakenews-br-data[huggingface]"
+**Funcionalidades extras**
+- `fakenews-br-data[huggingface]`: <mark>Explicar o que é </mark>
+- - `fakenews-br-data[dev]`: <mark>Explicar o que é </mark>
 
-# Para desenvolvimento (testes, formatação de código)
-pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ "fakenews-br-data[dev]"
-```
 
-## Estrutura do Projeto
+## Estrutura
 
 ```
 fakenews-data/
@@ -119,9 +109,11 @@ Veja `config.example.json` para um template completo.
 
 ## Fontes de Datasets
 
-Este framework suporta múltiplos datasets de fake news em português brasileiro:
+Este framework suporta os seguintes conjuntos de dados em português brasileiro:
 
-- **MuMiN-PT**: Subconjunto português do MuMiN (Multimodal Misinformation)
+<mark> Melhorar descrição dos datasets e incluir link </mark>
+
+- [**MuMiN-PT**](https://huggingface.co/datasets/ju-resplande/portuguese-fact-checking): Subconjunto português do MuMiN
 - **COVID19.BR**: Fact-checks e notícias sobre COVID-19
 - **Fake.br**: Dataset Fake.br processado
 - **FakeTweetBr**: Tweets em português rotulados
@@ -148,22 +140,6 @@ Este framework suporta múltiplos datasets de fake news em português brasileiro
 - `ensure_schema`, `normalize_date` - Utilitários de esquema
 - `sha256`, `download_to` - Funções utilitárias gerais
 
-## Desenvolvimento
-
-```bash
-git clone https://github.com/kauandivino/fakenews-data.git
-cd fakenews-data
-
-# Instalar em modo de desenvolvimento
-pip install -e .[dev]
-
-# Build do pacote
-uv build
-
-# Publicar no PyPI (requer token do PyPI)
-uv publish
-```
-
 ## Citação
 
 Se você usar este framework em sua pesquisa, por favor cite:
@@ -179,5 +155,5 @@ Se você usar este framework em sua pesquisa, por favor cite:
 
 ## Agradecimentos
 
-Este framework agrega e processa datasets de múltiplas fontes. Por favor, cite os autores originais dos datasets ao usar seus dados.
+This work has been fully funded by the project "Computational Techniques for Multimodal Data Security and Privacy" supported by the Advanced Knowledge Center in Immersive Technologies (AKCIT), with financial resources from the PPI IoT/Manufatura 4.0 / PPI HardwareBR of the MCTI grant number 057/2023, signed with EMBRAPII.
 
