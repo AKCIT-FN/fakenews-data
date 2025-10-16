@@ -11,7 +11,7 @@ _Framework_ para coleta, processamento e análise de _datasets_ de desinformaç�
 ## Instalação
 
 ```bash
-pip install git+https://github.com/kauandivino/fakenews-data
+pip install git+https://github.com/Vrt-sources/fakenews-data
 ```
 
 **Funcionalidades extras**
@@ -77,7 +77,9 @@ results = checker.check_claims(df)
 ```bash
 # Executar pipeline completo
 fakenews-br-data pipeline --config config.json --output ./data
+```
 
+```bash
 # Comandos individuais
 fakenews-br-data clean --input merged.csv --output clean.csv
 fakenews-br-data factcheck --input clean.csv --config config.json
@@ -106,6 +108,11 @@ Crie um arquivo `config.json` com suas configurações:
 ```
 
 Veja `config.example.json` para um template completo.
+
+```bash
+# Caso queira passar os parâmetros do config por tags
+fakenews-br-data pipeline  --tag out_dir=data  --tag max_workers=31  --tag factcheck_sleep=1   --tag factcheck_api_key= <API_KEY> 
+```
 
 ## Fontes de Datasets
 
@@ -147,9 +154,9 @@ Se você usar este framework em sua pesquisa, por favor cite:
 ```
 @software{fakenews_br_data,
   title = {fakenews-br-data: Brazilian Fake News Dataset Framework},
-  author = {Kauan Divino Pouso Mariano, Fabrycio Leite Nakano Almada, Maykon Adriell Dutra,  Victor Emanuel da Silva Monteiro, Juliana Resplande Sant'Anna Gomes},
+  authors = {Kauan Divino Pouso Mariano, Fabrycio Leite Nakano Almada, Maykon Adriell Dutra,  Victor Emanuel da Silva Monteiro, Juliana Resplande Sant'Anna Gomes},
   year = {2025},
-  url = {https://github.com/kauandivino/fakenews-data}
+  url = {https://github.com/Vrt-sources/fakenews-data}
 }
 ```
 
