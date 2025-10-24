@@ -11,7 +11,7 @@ from fakenews_br_data.downloaders import (
     ZenodoDownloader,
     URLDownloader,
     LocalFileLoader,
-    #KaggleDownloader,
+    KaggleDownloader,
 )
 from fakenews_br_data.schema import ensure_schema, assign_uids, extract_tweet_id
 from fakenews_br_data.cleaning import DatasetCleaner
@@ -290,13 +290,13 @@ class Pipeline:
         return results
 
 if __name__ == "__main__":
-    print("Iniciando o pipeline completo...\n")
+    print("Starting full pipeline...\n")
 
     pipeline = Pipeline(config_path="config.json")
     results = pipeline.run_full_pipeline(skip_download=False)
 
-    print("\nExecução concluída!")
-    print("Resultados:")
+    print("\nPipeline execution completed successfully!")
+    print("Results summary::")
     for key, value in results.items():
         print(f"{key}: {value}")
 
