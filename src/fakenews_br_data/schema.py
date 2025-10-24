@@ -172,7 +172,7 @@ def ensure_schema(
                 "verdadeiro": "true",
                 "real": "true",
                 "misleading": "fake",
-                "partly false": "fake",
+                "partly false": "mixed",
                 "partly_true": "mixed",
                 "mixed": "mixed",
             }
