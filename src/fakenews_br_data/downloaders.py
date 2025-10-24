@@ -6,6 +6,9 @@ import requests
 from abc import ABC, abstractmethod
 from typing import List, Dict, Optional
 from datasets import load_dataset
+import time
+import random
+from kaggle.api.kaggle_api_extended import KaggleApi
 from fakenews_br_data.utils import download_to
 
 
@@ -193,41 +196,124 @@ class URLDownloader(BaseDownloader):
         self.filename = filename
 
     def download(self, output_dir: str) -> List[str]:
-        """Download file from a direct URL."""
+        """Download file from a direct URL with retry, exponential backoff, and optional GitHub auth."""
+        import time
+        import random
+
         os.makedirs(output_dir, exist_ok=True)
         path = os.path.join(output_dir, self.filename)
 
-        logging.info(f"Downloading from URL: {self.url}")
-        download_to(path, self.url)
-        logging.info(f"Saved file: {os.path.basename(path)}")
+        max_retries = 5  # total retry attempts
+        base_delay = 2   # base backoff delay in seconds
+        headers = {}
 
-        return [path]
-    
+        # Optional GitHub authentication via environment variable
+        token = os.getenv("GITHUB_TOKEN")
+        if token:
+            headers["Authorization"] = f"token {token}"
+            logging.info("✅ Using GitHub token for authentication.")
+        else:
+            logging.warning("⚠️ No GitHub token found. You may hit rate limits (HTTP 429).")
+
+        for attempt in range(max_retries):
+            try:
+                # Random delay before each attempt to avoid server throttling
+                delay = random.uniform(1, 3)
+                logging.info(f"⏳ Waiting {delay:.1f}s before downloading {self.filename} (attempt {attempt + 1}/{max_retries})...")
+                time.sleep(delay)
+
+                logging.info(f"⬇️ Downloading from URL: {self.url}")
+                response = requests.get(self.url, headers=headers, timeout=60)
+
+                if response.status_code == 429:
+                    # Too many requests → respect Retry-After or use exponential backoff
+                    retry_after = int(response.headers.get("Retry-After", base_delay * (2 ** attempt)))
+                    logging.warning(f"🚫 429 Too Many Requests. Retrying in {retry_after}s...")
+                    time.sleep(retry_after)
+                    continue
+
+                response.raise_for_status()
+
+                with open(path, "wb") as f:
+                    f.write(response.content)
+
+                logging.info(f"✅ Successfully saved file: {os.path.basename(path)} ({len(response.content)} bytes)")
+                return [path]
+
+            except requests.exceptions.RequestException as e:
+                if attempt < max_retries - 1:
+                    wait = base_delay * (2 ** attempt)
+                    logging.warning(f"⚠️ Download attempt {attempt + 1} failed ({e}). Retrying in {wait}s...")
+                    time.sleep(wait)
+                else:
+                    logging.error(f"❌ Failed to download {self.url} after {max_retries} attempts: {e}")
+                    raise RuntimeError(f"Failed to download {self.url}: {e}") from e
+
 try:
-    from kaggle.api.kaggle_api_extended import KaggleApi
 
     class KaggleDownloader(BaseDownloader):
-        """Download datasets from Kaggle (requires kaggle.json credentials)."""
+        """Download datasets from Kaggle (using direct API key or environment variables)."""
 
         def __init__(self, dataset: str, file_filters: Optional[List[str]] = None):
             """
             Initialize KaggleDownloader.
 
             Args:
-                dataset: Kaggle dataset identifier (e.g., 'fabioselau/fakes-news-portuguese').
+                dataset: Kaggle dataset identifier.
                 file_filters: Optional list of files to keep after unzip.
             """
             self.dataset = dataset
             self.file_filters = file_filters or []
 
         def download(self, output_dir: str) -> List[str]:
-            """Download and extract dataset from Kaggle."""
+            """Download and extract dataset from Kaggle"""
             os.makedirs(output_dir, exist_ok=True)
-            api = KaggleApi()
-            api.authenticate()
 
-            logging.info(f"Downloading Kaggle dataset: {self.dataset}")
-            api.dataset_download_files(self.dataset, path=output_dir, unzip=True)
+            username = os.getenv("KAGGLE_USERNAME")
+            key = os.getenv("KAGGLE_KEY")
+
+            if not username or not key:
+                logging.error("Missing Kaggle credentials. Please set KAGGLE_USERNAME and KAGGLE_KEY environment variables.")
+                raise RuntimeError("Kaggle credentials not found in environment variables.")
+
+            logging.info(f"Using Kaggle credentials from environment (user: {username})")
+
+            api = KaggleApi()
+
+            api.config_values = {
+                "username": username,
+                "key": key,
+                "path": os.path.expanduser("~/.kaggle"),
+            }
+
+            try:
+                api.authenticate()
+                logging.info("Authenticated successfully with Kaggle API")
+            except Exception as e:
+                logging.error(f"Kaggle authentication failed: {e}")
+                raise RuntimeError(f"Kaggle authentication failed: {e}")
+
+            max_retries = 5
+            base_delay = 2
+
+            for attempt in range(max_retries):
+                try:
+                    delay = random.uniform(1, 3)
+                    logging.info(f"Waiting {delay:.1f}s before downloading from Kaggle (attempt {attempt + 1}/{max_retries})...")
+                    time.sleep(delay)
+
+                    logging.info(f"⬇Downloading Kaggle dataset: {self.dataset}")
+                    api.dataset_download_files(self.dataset, path=output_dir, unzip=True)
+                    break 
+
+                except Exception as e:
+                    if attempt < max_retries - 1:
+                        wait = base_delay * (2 ** attempt)
+                        logging.warning(f"Attempt {attempt + 1} failed ({e}). Retrying in {wait}s...")
+                        time.sleep(wait)
+                    else:
+                        logging.error(f"Failed to download Kaggle dataset '{self.dataset}' after {max_retries} attempts: {e}")
+                        raise RuntimeError(f"Failed to download Kaggle dataset: {e}")
 
             all_files = os.listdir(output_dir)
             selected = (
@@ -244,3 +330,4 @@ except ImportError:
         """Fallback stub when Kaggle API is not available."""
         def __init__(self, *args, **kwargs):
             raise ImportError("KaggleDownloader requires the 'kaggle' package to be installed.")
+
