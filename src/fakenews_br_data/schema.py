@@ -1,8 +1,9 @@
 """Schema normalization functions for different dataset formats."""
 
 import re
-from typing import Optional, List
+import logging
 import pandas as pd
+from typing import Optional, List
 
 
 def extract_url(text: str) -> Optional[str]:
@@ -65,7 +66,7 @@ def normalize_date(series: pd.Series) -> pd.Series:
         for fmt in fmts:
             try:
                 return pd.to_datetime(s, format=fmt, errors="raise")
-            except:
+            except Exception:
                 pass
         return pd.to_datetime(s, errors="coerce")
     
@@ -96,6 +97,7 @@ def ensure_schema(
     dataset_name: str,
     source_type: str,
     source_description: str,
+    log_level: str = "INFO",
 ) -> pd.DataFrame:
     """
     Normalize DataFrame to standard schema.
@@ -105,14 +107,18 @@ def ensure_schema(
         dataset_name: Name of the dataset
         source_type: Type of source (news, whatsapp, x, etc.)
         source_description: Description of the source
+        log_level: Minimum level of logs ("INFO" or "DEBUG")
         
     Returns:
         DataFrame with normalized schema
     """
+    logging.getLogger().setLevel(log_level.upper())
+
     id_cols = ["uid", "id", "ID", "post_id", "doc_id", "tweet_id"]
     date_cols = ["date", "data", "created_at", "publish_date", "time", "timestamp"]
     text_cols = [
         "text",
+        "text_no_url",  
         "content",
         "full_text",
         "title_text",
@@ -120,6 +126,8 @@ def ensure_schema(
         "body",
         "article_text",
         "message",
+        "noticia", 
+        "texto"
     ]
     label_cols = [
         "label",
@@ -129,21 +137,26 @@ def ensure_schema(
         "classificacao",
         "Rótulo",
         "rotulo",
+        "veredito"
     ]
     url_claim_cols = ["url", "link", "permalink", "source", "source_url", "url_claim"]
     url_review_cols = ["review_url", "url_review", "factcheck_url", "url_factcheck"]
 
     orig_id = pick_first(df, id_cols)
-
     text = pick_first(df, text_cols)
-    if text is None:
-        title = pick_first(df, ["title", "headline"])
-        body = pick_first(df, ["text", "content", "body", "article_text"])
-        text = (
-            (title.fillna("") + ". " + body.fillna(""))
-            if (title is not None and body is not None)
-            else (title if title is not None else body)
-        )
+
+    if text is None or text.dropna().empty:
+        title = pick_first(df, ["title", "headline", "titulo"])
+        body = pick_first(df, ["body", "content", "texto"])
+        if title is not None and body is not None:
+            text = (title.fillna("") + ". " + body.fillna("")).replace(r"^\.\s*", "", regex=True)
+        elif title is not None:
+            text = title
+        elif body is not None:
+            text = body
+        else:
+            logging.warning(f"[Schema] {dataset_name}: no valid text column found")
+            return pd.DataFrame()
 
     url_claim = pick_first(df, url_claim_cols)
     if url_claim is None:
@@ -161,22 +174,15 @@ def ensure_schema(
         label.astype(str)
         .str.strip()
         .str.lower()
-        .replace(
-            {
-                "1": "fake",
-                "0": "true",
-                "false": "false",
-                "true": "true",
-                "fake": "fake",
-                "falso": "fake",
-                "verdadeiro": "true",
-                "real": "true",
-                "misleading": "fake",
-                "partly false": "mixed",
-                "partly_true": "mixed",
-                "mixed": "mixed",
-            }
-        )
+        .replace({
+            "falso": "fake", "falsa": "fake", "mentira": "fake", "fake": "fake",
+            "misleading": "mixed", "duvidoso": "mixed",
+            "parcialmente falso": "mixed", "partly false": "mixed",
+            "partly_true": "mixed", "mixed": "mixed",
+            "verdadeiro": "true", "verdadeira": "true",
+            "real": "true", "true": "true", "verdade": "true",
+            "1": "fake", "0": "true", "-1": None, "none": None, "nan": None
+        })
     )
 
     date_raw = pick_first(df, date_cols)
@@ -200,6 +206,14 @@ def ensure_schema(
     out["dataset_name"] = dataset_name
     out["source_type"] = source_type
     out["source_description"] = source_description
+    
+    if len(out) > 0:
+        label_counts = out["label"].value_counts(dropna=False).to_dict()
+        logging.info(
+            f"[Schema] {dataset_name}: {len(out)} records | "
+            f"Labels → {label_counts}"
+        )
+
     return out
 
 
@@ -216,9 +230,10 @@ def assign_uids(dfs: List[pd.DataFrame]) -> List[pd.DataFrame]:
     next_uid = 1
     out = []
     for df in dfs:
+        if df.empty:
+            continue
         df = df.copy()
         df["uid"] = range(next_uid, next_uid + len(df))
         next_uid += len(df)
         out.append(df)
     return out
-
