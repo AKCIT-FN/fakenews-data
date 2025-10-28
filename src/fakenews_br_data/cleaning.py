@@ -2,9 +2,10 @@
 
 import re
 import unicodedata
-from typing import Tuple, List
+import logging
 import pandas as pd
 import demoji
+from typing import Tuple, List
 from urlextract import URLExtract
 
 extractor = URLExtract()
@@ -120,7 +121,7 @@ class DatasetCleaner:
     Clean and preprocess datasets with deduplication and quality filtering.
     """
     
-    def __init__(self, min_tokens: int = 5):
+    def __init__(self, min_tokens: int = 3):
         """
         Initialize DatasetCleaner.
         
@@ -146,34 +147,62 @@ class DatasetCleaner:
         Returns:
             Cleaned DataFrame
         """
+        logging.info(f"[Cleaning] Loading dataset from {path}")
+
         if path.endswith(".parquet"):
             df = pd.read_parquet(path)
         else:
-            df = pd.read_csv(path)
+            df = pd.read_csv(path, low_memory=False)
 
-        lbl = (
+        initial_rows = len(df)
+        logging.info(f"[Cleaning] Loaded {initial_rows} rows")
+
+        df["label"] = (
             df["label"]
             .astype(str)
             .str.strip()
             .str.lower()
-            .replace({"-1": None, "none": None, "false": "true"})
+            .replace({
+                "-1": None,
+                "none": None,
+                "nan": None,
+                "": None,
+                "falso": "fake",
+                "falsa": "fake",
+                "fake": "fake",
+                "false": "fake",
+                "verdadeiro": "true",
+                "verdadeira": "true",
+                "true": "true",
+                "real": "true",
+            })
         )
-        df["label"] = lbl
         df = df[df["label"].isin(["fake", "true"])].copy()
+        logging.info(f"[Cleaning] After label filtering: {len(df)} rows remain")
 
         df["text_no_url"], df["extracted_urls"] = zip(*df["text"].apply(remove_urls))
         df["text_clean"] = df["text_no_url"].apply(clean_for_factcheck)
 
+        if "dataset_name" in df.columns:
+            df["is_duplicated"] = (
+                df.groupby("dataset_name")["text_clean"]
+                .transform(lambda x: x.duplicated())
+            )
+        else:
+            df["is_duplicated"] = df["text_clean"].duplicated()
+
         df["is_null"] = df["text_clean"].isna()
-        df["is_duplicated"] = df["text_clean"].duplicated()
         df["too_short"] = df["text_clean"].apply(
             lambda t: len(t.split()) < self.min_tokens if pd.notna(t) else True
         )
 
         df_clean = df[~(df["is_null"] | df["is_duplicated"] | df["too_short"])].copy()
-        df_clean = df_clean.reset_index(drop=True)
+        df_clean.reset_index(drop=True, inplace=True)
 
-        df_clean = df_clean.drop(columns=["language", "uid"], errors="ignore")
+        drop_candidates = ["language"]
+        for c in drop_candidates:
+            if c in df_clean.columns:
+                df_clean.drop(columns=[c], inplace=True)
 
         cols_order_clean = [
             "dataset_name",
@@ -220,9 +249,13 @@ class DatasetCleaner:
 
         df_clean.to_parquet(save_parquet, index=False)
 
-        print("Linhas finais (clean):", len(df_clean))
-        print("Distribuição de labels:\n", df_clean["label"].value_counts())
-        print("Arquivos salvos:\n", save_csv, "\n", save_parquet)
+        logging.info(f"[Cleaning] Finished cleaning. {len(df_clean)} rows remain (from {initial_rows})")
+        logging.info(f"[Cleaning] Label distribution:\n{df_clean['label'].value_counts(dropna=False)}")
+        logging.info(f"[Cleaning] Saved cleaned files: {save_csv}, {save_parquet}")
+
+        print("Final cleaned rows:", len(df_clean))
+        print("Label distribution:\n", df_clean["label"].value_counts(dropna=False))
+        print("Saved files:\n", save_csv, "\n", save_parquet)
 
         return df_clean
 
