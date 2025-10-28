@@ -2,6 +2,7 @@
 
 import os
 import logging
+import json
 from typing import List, Optional, Dict, Any
 import pandas as pd
 
@@ -37,6 +38,9 @@ class Pipeline:
             self.config = config
         else:
             self.config = load_config(config_path)
+
+        log_level = self.config.get("log_level", "INFO").upper()
+        logging.getLogger().setLevel(log_level)
 
         self.out_dir = self.config.get("out_dir", "data")
         self.raw_dir = os.path.join(self.out_dir, "raw")
@@ -88,54 +92,71 @@ class Pipeline:
         Returns:
             List of paths to downloaded files.
         """
+        logging.info("[Pipeline] Step 1: Downloading datasets")
         all_paths = []
         for downloader in self.downloaders:
             try:
                 paths = downloader.download(self.raw_dir)
                 all_paths.extend(paths)
-                print(f"Downloaded {len(paths)} file(s) from {downloader.__class__.__name__}")
+                logging.info(f"[Pipeline] {downloader.__class__.__name__}: {len(paths)} file(s) downloaded")
             except Exception as e:
-                print(f"Failed to download from {downloader.__class__.__name__}: {e}")
+                logging.error(f"[Pipeline] Failed to download from {downloader.__class__.__name__}: {e}")
         return all_paths
     
+    
+    def _iter_raw_files(self) -> List[str]:
+        """Recursively list all CSV/Parquet files under self.raw_dir."""
+        files = []
+        for root, _, fns in os.walk(self.raw_dir):
+            for fn in fns:
+                if fn.startswith(".") or fn == "manifest.json":
+                    continue
+                if fn.lower().endswith((".csv", ".parquet")):
+                    files.append(os.path.join(root, fn))
+        return files
+
     def normalize_and_merge(
         self, local_files: Optional[Dict[str, Dict[str, str]]] = None
-    ) -> pd.DataFrame:
+    ) -> tuple[pd.DataFrame, Dict[str, int]]:
         """Normalize schemas and merge all datasets."""
-        frames = []
-        dataset_stats = {}
+        logging.info("[Pipeline] Step 2: Normalizing and merging")
 
-        for fn in os.listdir(self.raw_dir):
-            if fn.startswith(".") or fn == "manifest.json":
-                continue
+        frames: List[pd.DataFrame] = []
+        dataset_counts: Dict[str, int] = {}
+        total_files = 0
 
-            path = os.path.join(self.raw_dir, fn)
-            if not os.path.isfile(path):
-                continue
+        for path in self._iter_raw_files():
+            total_files += 1
+            fn = os.path.basename(path)
 
             try:
-                if fn.endswith(".parquet"):
+                if path.lower().endswith(".parquet"):
                     df = pd.read_parquet(path)
-                elif fn.endswith(".csv"):
+                elif path.lower().endswith(".csv"):
                     df = pd.read_csv(path, low_memory=False)
                 else:
                     continue
 
-                dataset_name = fn.replace(".parquet", "").replace(".csv", "")
+                dataset_name = os.path.splitext(fn)[0]
                 df_norm = ensure_schema(
                     df,
                     dataset_name=dataset_name,
                     source_type="news",
                     source_description=f"Dataset {dataset_name}",
+                    #log_level=self.config.get("log_level", "INFO"),
                 )
+
+                if df_norm is None or df_norm.empty:
+                    logging.warning(f"[Pipeline] Skipping empty dataset after normalization: {dataset_name}")
+                    continue
+
                 frames.append(df_norm)
-                dataset_stats[dataset_name] = len(df_norm)
-                print(f"Normalized {dataset_name}: {len(df_norm)} records")
+                dataset_counts[dataset_name] = len(df_norm)
+                logging.info(f"[Pipeline] Normalized {dataset_name}: {len(df_norm)} records")
 
             except Exception as e:
-                print(f"Failed to process {fn}: {e}")
+                logging.error(f"[Pipeline] Failed to process {fn}: {e}")
 
-        # Handle FakeTweetBr tweet_id extraction
         for i, _df in enumerate(frames):
             if "dataset_name" in _df.columns and _df["dataset_name"].eq("FakeTweetBr").any():
                 mask = _df["dataset_name"].eq("FakeTweetBr")
@@ -144,11 +165,17 @@ class Pipeline:
                 frames[i] = _df
 
         frames = assign_uids(frames)
+        frames = [df for df in frames if df["dataset_name"].iloc[0] != "MuMiN-PT"]
+        if not frames:
+            logging.warning("[Pipeline] No datasets available after normalization")
+            return pd.DataFrame(), {}
+
         df_final = pd.concat(frames, ignore_index=True)
 
-        df_final = df_final[df_final["text"].notna()]
-        df_final = df_final.drop_duplicates(subset=["text"])
-        df_final = df_final.drop(columns=["language", "uid"], errors="ignore")
+        if "text" in df_final.columns:
+            before = len(df_final)
+            df_final = df_final[df_final["text"].notna()]
+            logging.info(f"[Pipeline] Removed rows with null text: {before - len(df_final)}")
 
         cols_order = [
             "dataset_name",
@@ -167,12 +194,29 @@ class Pipeline:
             + [c for c in df_final.columns if c not in cols_order]
         )
 
-        print("\n=== Merge Statistics ===")
-        print(f"Total rows: {len(df_final)}")
-        print(f"By dataset:\n{df_final['dataset_name'].value_counts()}")
-        print(f"By label:\n{df_final['label'].value_counts(dropna=False)}")
+        logging.info("\n[Pipeline] === Merge Statistics ===")
+        logging.info(f"[Pipeline] Files scanned: {total_files}")
+        logging.info(f"[Pipeline] Total rows (normalized, concatenated): {len(df_final)}")
 
-        return df_final
+        if "dataset_name" in df_final.columns:
+            vc = df_final["dataset_name"].value_counts(dropna=False)
+            logging.info(f"[Pipeline] By dataset:\n{vc.to_string()}")
+        if "label" in df_final.columns:
+            vl = df_final["label"].value_counts(dropna=False)
+            logging.info(f"[Pipeline] By label:\n{vl.to_string()}")
+
+        return df_final, dataset_counts
+    
+    def _save_dataset_stats(self, normalized_counts: Dict[str, int], merged_total: int) -> None:
+        """Save dataset statistics to dataset_stats.json."""
+        stats_path = os.path.join(self.out_dir, "dataset_stats.json")
+        data = {
+            "normalized_counts": normalized_counts,
+            "merged_total_rows": merged_total,
+        }
+        with open(stats_path, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=2, ensure_ascii=False)
+        logging.info(f"[Pipeline] Saved dataset stats at: {stats_path}")
     
     def save_merged(self, df: pd.DataFrame) -> tuple[str, str]:
         """Save merged dataset to CSV and Parquet."""
@@ -203,7 +247,7 @@ class Pipeline:
         df.to_parquet(parquet_path, index=False)
         save_manifest(self.out_dir)
 
-        print(f"Saved merged dataset to:\n  {csv_path}\n  {parquet_path}")
+        logging.info(f"[Pipeline] Saved merged dataset:\n  {csv_path}\n  {parquet_path}")
         return csv_path, parquet_path
     
     def clean(self, input_path: Optional[str] = None) -> pd.DataFrame:
@@ -211,7 +255,7 @@ class Pipeline:
         if input_path is None:
             input_path = os.path.join(self.out_dir, "FakenewsBR_merged.csv")
 
-        cleaner = DatasetCleaner(min_tokens=self.config.get("min_tokens", 5))
+        cleaner = DatasetCleaner(min_tokens=self.config.get("min_tokens", 3))
         df_clean = cleaner.clean_dataset(
             input_path,
             save_csv=os.path.join(self.out_dir, "FakenewsBR_clean.csv"),
@@ -223,16 +267,23 @@ class Pipeline:
         """Add near-duplicate detection."""
         dup_config = self.config.get("deduplication", {})
         detector = DuplicateDetector(
-            threshold=dup_config.get("threshold", 0.7),
-            ngram=dup_config.get("ngram", 5),
+            threshold=dup_config.get("threshold", 0.85),
+            ngram=dup_config.get("ngram", 3),
             seed=dup_config.get("seed", 3),
-            num_perm=dup_config.get("num_perm", 128),
+            num_perm=dup_config.get("num_perm", 64),
             bands=dup_config.get("bands", 50),
         )
 
+        if "text_clean" not in df.columns:
+            logging.warning("[Pipeline] text_clean not found. Skipping near-duplicate detection.")
+            return df
+
+        logging.info("[Pipeline] Running near-duplicate detection...")
         texts = df["text_clean"].fillna("").tolist()
         near_dups = detector.find_near_duplicates(texts)
+        df = df.copy()
         df["near_duplicates"] = df.index.map(lambda i: near_dups.get(i, []))
+        logging.info("[Pipeline] Near-duplicate detection finished")
         return df
     
     def factcheck(self, input_path: Optional[str] = None, output_path: Optional[str] = None) -> str:
@@ -265,15 +316,27 @@ class Pipeline:
             self.download()
 
         print("\n=== Step 2: Normalizing and merging ===")
-        df_merged = self.normalize_and_merge()
+        df_merged, normalized_counts = self.normalize_and_merge()
+        if df_merged is None or df_merged.empty:
+            logging.error("[Pipeline] No data available after normalization and merge. Aborting.")
+            return {}
+        
         csv_path, parquet_path = self.save_merged(df_merged)
         results["merged_csv"] = csv_path
         results["merged_parquet"] = parquet_path
+        self._save_dataset_stats(normalized_counts, merged_total=len(df_merged))
 
         print("\n=== Step 3: Cleaning dataset ===")
         self.clean()
         results["clean_csv"] = os.path.join(self.out_dir, "FakenewsBR_clean.csv")
         results["clean_parquet"] = os.path.join(self.out_dir, "FakenewsBR_clean.parquet")
+
+        if self.config.get("enable_deduplication", False):
+            print("\n=== Optional: Near-duplicate detection ===")
+            cleaned_df = pd.read_parquet(results["clean_parquet"])
+            cleaned_df = self.add_deduplication(cleaned_df)
+            cleaned_df.to_parquet(results["clean_parquet"], index=False)
+            logging.info("[Pipeline] Updated cleaned Parquet with near_duplicates column")
 
         if self.config.get("factcheck_api_key"):
             print("\n=== Step 4: Running Fact Check ===")
@@ -299,6 +362,4 @@ if __name__ == "__main__":
     print("Results summary::")
     for key, value in results.items():
         print(f"{key}: {value}")
-
-
 
