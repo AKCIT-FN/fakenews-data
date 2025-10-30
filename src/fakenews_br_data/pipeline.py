@@ -47,15 +47,26 @@ class Pipeline:
         os.makedirs(self.raw_dir, exist_ok=True)
 
         self.downloaders = self._setup_downloaders()
+
+        # Mapeamento de source_type por dataset
+        self.source_type_map: Dict[str, str] = {
+            "COVID19.BR": "news",
+            "Fake.br": "tweets",
+            "MuMiN-PT": "news",
+            "FakeWhatsApp.BR_2018": "whatsapp messages",
+            "LLM4BR_300": "brazilian news about politics",
+            "fake": "tweets with only fake news",
+            "true": "tweets with only true info",
+        }
     
     def _setup_downloaders(self) -> List:
         """Setup dataset downloaders."""
         downloaders = []
         
         hf_datasets = [
-            ("ju-resplande/portuguese-fact-checking", "COVID19.BR (raw)", "COVID19.BR_raw"),
-            ("ju-resplande/portuguese-fact-checking", "Fake.br (raw)", "Fake.br_raw"),
-            ("ju-resplande/portuguese-fact-checking", "MuMiN-PT (raw)", "MuMiN-PT_raw"),
+            ("ju-resplande/portuguese-fact-checking", "COVID19.BR", "COVID19.BR"),
+            ("ju-resplande/portuguese-fact-checking", "Fake.br", "Fake.br"),
+            ("ju-resplande/portuguese-fact-checking", "MuMiN-PT", "MuMiN-PT"),
         ]
         for ds, subset, name in hf_datasets:
             downloaders.append(HuggingFaceDownloader(ds, subset, name))
@@ -138,10 +149,11 @@ class Pipeline:
                     continue
 
                 dataset_name = os.path.splitext(fn)[0]
+                source_type = self.source_type_map.get(dataset_name, "news")
                 df_norm = ensure_schema(
                     df,
                     dataset_name=dataset_name,
-                    source_type="news",
+                    source_type=source_type,
                     source_description=f"Dataset {dataset_name}",
                     #log_level=self.config.get("log_level", "INFO"),
                 )
@@ -161,11 +173,9 @@ class Pipeline:
             if "dataset_name" in _df.columns and _df["dataset_name"].eq("FakeTweetBr").any():
                 mask = _df["dataset_name"].eq("FakeTweetBr")
                 _df.loc[mask, "tweet_id"] = _df.loc[mask, "url_claim"].apply(extract_tweet_id)
-                _df.loc[mask, "orig_id"] = _df.loc[mask, "tweet_id"]
                 frames[i] = _df
 
         frames = assign_uids(frames)
-        frames = [df for df in frames if df["dataset_name"].iloc[0] != "MuMiN-PT"]
         if not frames:
             logging.warning("[Pipeline] No datasets available after normalization")
             return pd.DataFrame(), {}
@@ -183,7 +193,6 @@ class Pipeline:
             "source_description",
             "label",
             "date_iso",
-            "orig_id",
             "tweet_id",
             "url_claim",
             "url_review",
@@ -228,7 +237,6 @@ class Pipeline:
         text_like = [
             "label",
             "text",
-            "orig_id",
             "url_claim",
             "url_review",
             "dataset_name",
