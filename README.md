@@ -120,9 +120,52 @@ Este framework suporta os seguintes conjuntos de dados em português brasileiro:
 
 <mark> Melhorar descrição dos datasets e incluir link </mark>
 
-- [**MuMiN-PT**](https://huggingface.co/datasets/ju-resplande/portuguese-fact-checking): Subconjunto português do MuMiN
-- **COVID19.BR**: Fact-checks e notícias sobre COVID-19
-- **Fake.br**: Dataset Fake.br processado
+- [**MuMiN-PT**](https://huggingface.co/datasets/ju-resplande/portuguese-fact-checking): Subconjunto português do MuMiN, foi montado por abordagem top-down: começando de alegações já verificadas por agências de fact-checking e, então, mapeando os posts do X/Twitter (2020–2022).
+  
+  Tarefa e rótulos
+  - Tarefa: classificação de veracidade/misinformation em texto curto (tweets).
+  - Distribuição de classes: ~1.404 instâncias (≈ 1.339 vs 65 na tabela do card), com forte desbalanceamento — a classe minoritária são as verdadeiras após o filtro para PT, o que motivou inclusive a exclusão do MuMiN-PT de alguns experimentos no estudo.
+
+  Esquema (versão “clean” do MuMiN-PT)
+  - Campos visíveis no viewer do dataset específico ju-resplande/MuMiN-PT (1.4k linhas, split único “train” + máscaras):
+    - id (int64)
+    - claim (string, PT)
+    - claim_en (string, EN – tradução do enunciado)
+    - verdict (string, 2 classes)
+    - train_mask, val_mask, test_mask (booleanos) – máscaras para reconstruir partições. 
+
+  Estatísticas pós limpeza
+  - Tamanho médio do texto (palavras): ~18.9 (misinfo) / 16.9 (verdadeiro).
+  - Presença de URL: ~0.3% (misinfo) / 0.0% (verdadeiro).
+  - Período: 2020–2022.
+
+- [**COVID19.BR**](https://huggingface.co/datasets/ju-resplande/portuguese-fact-checking): Fact-checks e notícias sobre COVID-19: Corpus de mensagens de WhatsApp sobre Covid-19 em PT-BR, coletado em 236 grupos públicos entre abril–junho/2020. Abordagem bottom-up.
+
+  Tarefa e rótulos
+  - Classificação binária (label: fake/true). 1.99k linhas no split “train” do viewer. Distribuição após limpeza: 848 falsas / 1.139 verdadeiras.
+
+  Esquema
+  - Texto: text_no_url.
+  - Rótulos e splits: label, new_split (3 valores; use para reconstruir train/val/test).
+  - Evidências externas: initial_query, claim_query, google_search_results (lista), google_fact_check_results (dict).
+  - Qualidade/duplicatas: near_duplicates (lista), text_urls (lista), metadata (dict).
+
+  Estatísticas úteis (pós-limpeza, do card)
+  - % com URL: 28,9% nas falsas / 56,9% nas verdadeiras.
+  - Comprimento médio (palavras): 167,7 falsas / 111,1 verdadeiras.
+  - Ano: 2020. Domínio: Saúde.
+
+- [**Fake.br**](https://huggingface.co/datasets/ju-resplande/portuguese-fact-checking): Corpus de notícias brasileiras com pares alinhados de textos falsos e verdadeiros, coletados na web e pareados por similaridade lexical. Período alvo: jan/2016–jan/2018.
+
+  Tarefa e rótulos:
+  - Tarefa: classificação binária de veracidade em notícias longas. 
+  - Balanceamento: equilibrado 50/50 no “clean” (3.580/3.580).
+
+  Esquema no pacote combinado (clean)
+  - Colunas expostas no viewer do dataset combinado incluem, entre outras: text_no_url, label (fake/true), old_split, new_split, text_urls, near_duplicates, google_search_results, google_fact_check_results, metadata. Algumas podem estar vazias dependendo da instância.
+  - Estatísticas agregadas para Fake.Br: média de palavras ~181,4 (falsas) / 183,1 (verdadeiras).
+
+
 - **FakeTweetBr**: Tweets em português rotulados
 - **FakeWhatsAppBR**: Mensagens do WhatsApp de 2018
 - **Datasets do Kaggle**: Coleções de notícias verdadeiras e falsas
@@ -154,7 +197,7 @@ Se você usar este framework em sua pesquisa, por favor cite:
 ```
 @software{fakenews_br_data,
   title = {fakenews-br-data: Brazilian Fake News Dataset Framework},
-  authors = {Kauan Divino Pouso Mariano, Fabrycio Leite Nakano Almada, Maykon Adriell Dutra,  Victor Emanuel da Silva Monteiro, Juliana Resplande Sant'Anna Gomes},
+  authors = {Fabrycio Leite Nakano Almada, Kauan Divino Pouso Mariano, Maykon Adriell Dutra,  Victor Emanuel da Silva Monteiro, Juliana Resplande Sant'Anna Gomes},
   year = {2025},
   url = {https://github.com/Vrt-sources/fakenews-data}
 }
