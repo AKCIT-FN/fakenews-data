@@ -1,4 +1,5 @@
-# Python
+.env
+*.pyc
 __pycache__/
 *.py[cod]
 *$py.class
@@ -19,49 +20,14 @@ wheels/
 *.egg-info/
 .installed.cfg
 *.egg
-
-# Virtual environments
 venv/
-env/
 ENV/
-.venv
-.uv/
-
-# IDEs
-.vscode/
-.idea/
-*.swp
-*.swo
-*~
-
-# Data directories
-data/
-out/
+env/
+.venv/
 *.db
-*.csv
+*.sqlite
+*.log
+data/
 *.parquet
-*.zip
-
-# Config with secrets
-config.json
-
-# Jupyter
-.ipynb_checkpoints/
-*.ipynb
-
-# GitHub Actions (keeping .example files)
-!.github/workflows/*.example
-
-# OS
-.DS_Store
-Thumbs.db
-
-# Testing
-.pytest_cache/
-.coverage
-htmlcov/
-
-# Distribution
-*.tar.gz
-*.whl
-
+*.csv
+!tests/**/*.csv

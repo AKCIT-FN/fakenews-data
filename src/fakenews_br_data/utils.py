@@ -2,12 +2,11 @@
 
 import hashlib
 import json
-import logging
 import os
 import time
 import requests
-from typing import Dict, Optional
 from datetime import datetime
+from loguru import logger
 
 def sha256(path: str) -> str:
     """
@@ -46,7 +45,7 @@ def save_manifest(folder: str) -> None:
     with open(manifest_path, "w", encoding="utf-8") as f:
         json.dump(manifest, f, indent=2, ensure_ascii=False)
     
-    logging.info(f"Manifest saved at: {manifest_path}")
+    logger.info(f"Manifest saved at: {manifest_path}")
 
 
 def download_to(path: str, url: str, max_retries: int = 3, sleep: float = 3.0) -> str:
@@ -74,14 +73,16 @@ def download_to(path: str, url: str, max_retries: int = 3, sleep: float = 3.0) -
         with open(log_path, "a", encoding="utf-8") as logf:
             logf.write(f"[{ts}] {status} | {os.path.basename(path)} | {message}\n")
 
+    min_file_size = 1024
+    
     if os.path.exists(path):
         size = os.path.getsize(path)
         if size >= min_file_size:
-            logging.info(f"[Download] Skipping existing valid file: {os.path.basename(path)} ({size/1e6:.2f} MB)")
+            logger.info(f"[Download] Skipping existing valid file: {os.path.basename(path)} ({size/1e6:.2f} MB)")
             _log("SKIP", f"Existing valid file ({size/1e6:.2f} MB)")
             return path
         else:
-            logging.warning(f"[Download] Re-downloading {os.path.basename(path)} (size too small: {size} bytes)")
+            logger.warning(f"[Download] Re-downloading {os.path.basename(path)} (size too small: {size} bytes)")
             try:
                 os.remove(path)
             except OSError:
@@ -110,18 +111,18 @@ def download_to(path: str, url: str, max_retries: int = 3, sleep: float = 3.0) -
                 if total_size and downloaded < total_size * 0.95:
                     raise IOError("Incomplete download (less than 95% of expected size)")
 
-                logging.info(f"[Download] OK | {os.path.basename(path)} | {downloaded/1e6:.2f} MB from {url}")
+                logger.info(f"[Download] OK | {os.path.basename(path)} | {downloaded/1e6:.2f} MB from {url}")
                 _log("OK", f"{downloaded/1e6:.2f} MB from {url}")
                 return path
 
         except Exception as e:
             if attempt < max_retries:
                 wait = sleep * (2 ** (attempt - 1))
-                logging.warning(f"[Download] Attempt {attempt}/{max_retries} failed ({e}). Retrying in {wait:.1f}s...")
+                logger.warning(f"[Download] Attempt {attempt}/{max_retries} failed ({e}). Retrying in {wait:.1f}s...")
                 _log("RETRY", f"Attempt {attempt} failed: {e}")
                 time.sleep(wait)
             else:
-                logging.error(f"[Download] FAILED after {max_retries} attempts: {url}")
+                logger.error(f"[Download] FAILED after {max_retries} attempts: {url}")
                 _log("FAIL", str(e))
                 raise RuntimeError(f"Failed to download {url}: {e}") from e
 

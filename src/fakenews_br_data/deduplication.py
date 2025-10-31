@@ -2,6 +2,7 @@
 
 from typing import List, Dict
 from datasketch import MinHash, MinHashLSH
+from tqdm.auto import tqdm
 
 
 class DuplicateDetector:
@@ -33,30 +34,37 @@ class DuplicateDetector:
         self.num_perm = num_perm
         self.bands = bands
     
-    def find_near_duplicates(self, texts: List[str]) -> Dict[int, List[str]]:
+    def find_near_duplicates(self, texts: List[str], show_progress_bar: bool = True) -> Dict[int, List[str]]:
         """
         Find near-duplicate texts.
         
         Args:
             texts: List of text strings
+            show_progress_bar: Whether to show progress bar
             
         Returns:
             Dictionary mapping index to list of similar indices
         """
         minhashes = []
-        for t in texts:
+        pbar = tqdm(texts, desc="Building MinHashes", disable=not show_progress_bar)
+        for t in pbar:
             mh = MinHash(num_perm=self.num_perm, seed=self.seed)
             tokens = {t[i : i + self.ngram] for i in range(max(1, len(t) - self.ngram + 1))}
             for shingle in tokens:
                 mh.update(shingle.encode("utf8"))
             minhashes.append(mh)
+        pbar.close()
 
         lsh = MinHashLSH(threshold=self.threshold, num_perm=self.num_perm)
-        for i, mh in enumerate(minhashes):
+        pbar = tqdm(enumerate(minhashes), total=len(minhashes), desc="Inserting into LSH", disable=not show_progress_bar)
+        for i, mh in pbar:
             lsh.insert(str(i), mh)
+        pbar.close()
 
         near_dups = {}
-        for i, mh in enumerate(minhashes):
+        pbar = tqdm(enumerate(minhashes), total=len(minhashes), desc="Querying duplicates", disable=not show_progress_bar)
+        for i, mh in pbar:
             near_dups[i] = lsh.query(mh)
+        pbar.close()
         return near_dups
 

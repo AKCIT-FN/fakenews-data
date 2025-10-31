@@ -1,0 +1,21 @@
+# Configuration file for fakenews-br-data
+# Copy this file to config.toml and adjust values as needed
+# Or set FACTCHECK_API_KEY in .env file
+
+factcheck_api_key = ""  # Can also be set via FACTCHECK_API_KEY env var
+out_dir = "data"
+max_workers = 31
+factcheck_sleep = 1.0
+max_inflight = 200
+min_tokens = 5
+max_query_size = 512
+language_code = "pt-BR"
+show_progress_bar = true
+
+[deduplication]
+threshold = 0.7
+ngram = 5
+seed = 3
+num_perm = 128
+bands = 50
+

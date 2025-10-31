@@ -1,17 +1,15 @@
 """Main pipeline orchestration for dataset processing."""
 
 import os
-import logging
 import json
 from typing import List, Optional, Dict, Any
 import pandas as pd
+from loguru import logger
 
 from fakenews_br_data.config import load_config
 from fakenews_br_data.downloaders import (
     HuggingFaceDownloader,
-    ZenodoDownloader,
     URLDownloader,
-    LocalFileLoader,
     KaggleDownloader,
 )
 from fakenews_br_data.schema import ensure_schema, assign_uids, extract_tweet_id
@@ -40,7 +38,8 @@ class Pipeline:
             self.config = load_config(config_path)
 
         log_level = self.config.get("log_level", "INFO").upper()
-        logging.getLogger().setLevel(log_level)
+        logger.remove()
+        logger.add(lambda msg: print(msg, end=""), level=log_level)
 
         self.out_dir = self.config.get("out_dir", "data")
         self.raw_dir = os.path.join(self.out_dir, "raw")
@@ -92,7 +91,7 @@ class Pipeline:
                 )
             )
         except Exception as e:
-            logging.warning(f"Kaggle dataset skipped: {e}")
+            logger.warning(f"Kaggle dataset skipped: {e}")
 
         return downloaders
     
@@ -103,15 +102,16 @@ class Pipeline:
         Returns:
             List of paths to downloaded files.
         """
-        logging.info("[Pipeline] Step 1: Downloading datasets")
+        logger.info("[Pipeline] Step 1: Downloading datasets")
         all_paths = []
+        show_progress = self.config.get("show_progress_bar", True)
         for downloader in self.downloaders:
             try:
-                paths = downloader.download(self.raw_dir)
+                paths = downloader.download(self.raw_dir, show_progress_bar=show_progress)
                 all_paths.extend(paths)
-                logging.info(f"[Pipeline] {downloader.__class__.__name__}: {len(paths)} file(s) downloaded")
+                logger.info(f"[Pipeline] {downloader.__class__.__name__}: {len(paths)} file(s) downloaded")
             except Exception as e:
-                logging.error(f"[Pipeline] Failed to download from {downloader.__class__.__name__}: {e}")
+                logger.error(f"[Pipeline] Failed to download from {downloader.__class__.__name__}: {e}")
         return all_paths
     
     
@@ -130,7 +130,7 @@ class Pipeline:
         self, local_files: Optional[Dict[str, Dict[str, str]]] = None
     ) -> tuple[pd.DataFrame, Dict[str, int]]:
         """Normalize schemas and merge all datasets."""
-        logging.info("[Pipeline] Step 2: Normalizing and merging")
+        logger.info("[Pipeline] Step 2: Normalizing and merging")
 
         frames: List[pd.DataFrame] = []
         dataset_counts: Dict[str, int] = {}
@@ -158,18 +158,18 @@ class Pipeline:
                     #log_level=self.config.get("log_level", "INFO"),
                 )
                 if "url_review" in df_norm.columns and df_norm["url_review"].isna().all():
-                    logging.info(f"[Pipeline] {dataset_name}: url_review totalmente ausente após normalização")
+                    logger.info(f"[Pipeline] {dataset_name}: url_review totalmente ausente após normalização")
 
                 if df_norm is None or df_norm.empty:
-                    logging.warning(f"[Pipeline] Skipping empty dataset after normalization: {dataset_name}")
+                    logger.warning(f"[Pipeline] Skipping empty dataset after normalization: {dataset_name}")
                     continue
 
                 frames.append(df_norm)
                 dataset_counts[dataset_name] = len(df_norm)
-                logging.info(f"[Pipeline] Normalized {dataset_name}: {len(df_norm)} records")
+                logger.info(f"[Pipeline] Normalized {dataset_name}: {len(df_norm)} records")
 
             except Exception as e:
-                logging.error(f"[Pipeline] Failed to process {fn}: {e}")
+                logger.error(f"[Pipeline] Failed to process {fn}: {e}")
 
         for i, _df in enumerate(frames):
             if "dataset_name" in _df.columns and _df["dataset_name"].eq("FakeTweetBr").any():
@@ -179,7 +179,7 @@ class Pipeline:
 
         frames = assign_uids(frames)
         if not frames:
-            logging.warning("[Pipeline] No datasets available after normalization")
+            logger.warning("[Pipeline] No datasets available after normalization")
             return pd.DataFrame(), {}
 
         df_final = pd.concat(frames, ignore_index=True)
@@ -187,7 +187,7 @@ class Pipeline:
         if "text" in df_final.columns:
             before = len(df_final)
             df_final = df_final[df_final["text"].notna()]
-            logging.info(f"[Pipeline] Removed rows with null text: {before - len(df_final)}")
+            logger.info(f"[Pipeline] Removed rows with null text: {before - len(df_final)}")
 
         cols_order = [
             "dataset_name",
@@ -205,16 +205,16 @@ class Pipeline:
             + [c for c in df_final.columns if c not in cols_order]
         )
 
-        logging.info("\n[Pipeline] === Merge Statistics ===")
-        logging.info(f"[Pipeline] Files scanned: {total_files}")
-        logging.info(f"[Pipeline] Total rows (normalized, concatenated): {len(df_final)}")
+        logger.info("\n[Pipeline] === Merge Statistics ===")
+        logger.info(f"[Pipeline] Files scanned: {total_files}")
+        logger.info(f"[Pipeline] Total rows (normalized, concatenated): {len(df_final)}")
 
         if "dataset_name" in df_final.columns:
             vc = df_final["dataset_name"].value_counts(dropna=False)
-            logging.info(f"[Pipeline] By dataset:\n{vc.to_string()}")
+            logger.info(f"[Pipeline] By dataset:\n{vc.to_string()}")
         if "label" in df_final.columns:
             vl = df_final["label"].value_counts(dropna=False)
-            logging.info(f"[Pipeline] By label:\n{vl.to_string()}")
+            logger.info(f"[Pipeline] By label:\n{vl.to_string()}")
 
         return df_final, dataset_counts
     
@@ -227,7 +227,7 @@ class Pipeline:
         }
         with open(stats_path, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=2, ensure_ascii=False)
-        logging.info(f"[Pipeline] Saved dataset stats at: {stats_path}")
+        logger.info(f"[Pipeline] Saved dataset stats at: {stats_path}")
     
     def save_merged(self, df: pd.DataFrame) -> tuple[str, str]:
         """Save merged dataset to CSV and Parquet."""
@@ -257,7 +257,7 @@ class Pipeline:
         df.to_parquet(parquet_path, index=False)
         save_manifest(self.out_dir)
 
-        logging.info(f"[Pipeline] Saved merged dataset:\n  {csv_path}\n  {parquet_path}")
+        logger.info(f"[Pipeline] Saved merged dataset:\n  {csv_path}\n  {parquet_path}")
         return csv_path, parquet_path
     
     def clean(self, input_path: Optional[str] = None) -> pd.DataFrame:
@@ -285,15 +285,16 @@ class Pipeline:
         )
 
         if "text_clean" not in df.columns:
-            logging.warning("[Pipeline] text_clean not found. Skipping near-duplicate detection.")
+            logger.warning("[Pipeline] text_clean not found. Skipping near-duplicate detection.")
             return df
 
-        logging.info("[Pipeline] Running near-duplicate detection...")
+        logger.info("[Pipeline] Running near-duplicate detection...")
         texts = df["text_clean"].fillna("").tolist()
-        near_dups = detector.find_near_duplicates(texts)
+        show_progress = self.config.get("show_progress_bar", True)
+        near_dups = detector.find_near_duplicates(texts, show_progress_bar=show_progress)
         df = df.copy()
         df["near_duplicates"] = df.index.map(lambda i: near_dups.get(i, []))
-        logging.info("[Pipeline] Near-duplicate detection finished")
+        logger.info("[Pipeline] Near-duplicate detection finished")
         return df
     
     def factcheck(self, input_path: Optional[str] = None, output_path: Optional[str] = None) -> str:
@@ -313,6 +314,9 @@ class Pipeline:
             max_workers=self.config.get("max_workers", 31),
             max_inflight=self.config.get("max_inflight", 200),
             sleep_time=self.config.get("factcheck_sleep", 1.0),
+            max_query_size=self.config.get("max_query_size", 512),
+            language_code=self.config.get("language_code", "pt-BR"),
+            show_progress_bar=self.config.get("show_progress_bar", True),
         )
 
         return checker.process_dataset(input_path, output_path, self.out_dir)
@@ -322,38 +326,40 @@ class Pipeline:
         results = {}
 
         if not skip_download:
-            print("\n=== Step 1: Downloading datasets ===")
+            logger.info("\n=== Step 1: Downloading datasets ===")
             self.download()
 
-        print("\n=== Step 2: Normalizing and merging ===")
+        logger.info("\n=== Step 2: Normalizing and merging ===")
         df_merged, normalized_counts = self.normalize_and_merge()
         if df_merged is None or df_merged.empty:
-            logging.error("[Pipeline] No data available after normalization and merge. Aborting.")
+            logger.error("[Pipeline] No data available after normalization and merge. Aborting.")
             return {}
         
         csv_path, parquet_path = self.save_merged(df_merged)
         results["merged_csv"] = csv_path
         results["merged_parquet"] = parquet_path
         self._save_dataset_stats(normalized_counts, merged_total=len(df_merged))
-        print("\n[Preview] Step 2 · normalized+merged"); print(df_merged.head(5))
+        logger.info("\n[Preview] Step 2 · normalized+merged")
+        logger.info(f"\n{df_merged.head(5)}")
 
-        print("\n=== Step 3: Cleaning dataset ===")
-        self.clean()
+        logger.info("\n=== Step 3: Cleaning dataset ===")
         df_clean = self.clean()
         results["clean_csv"] = os.path.join(self.out_dir, "FakenewsBR_clean.csv")
         results["clean_parquet"] = os.path.join(self.out_dir, "FakenewsBR_clean.parquet")
-        print("\n[Preview] Step 3 · cleaned"); print(df_clean.head(5))
+        logger.info("\n[Preview] Step 3 · cleaned")
+        logger.info(f"\n{df_clean.head(5)}")
 
         if self.config.get("enable_deduplication", False):
-            print("\n=== Optional: Near-duplicate detection ===")
+            logger.info("\n=== Optional: Near-duplicate detection ===")
             cleaned_df = pd.read_parquet(results["clean_parquet"])
             cleaned_df = self.add_deduplication(cleaned_df)
             cleaned_df.to_parquet(results["clean_parquet"], index=False)
-            logging.info("[Pipeline] Updated cleaned Parquet with near_duplicates column")
-            print("\n[Preview] Step 3b · cleaned+near_duplicates"); print(cleaned_df.head(5))
+            logger.info("[Pipeline] Updated cleaned Parquet with near_duplicates column")
+            logger.info("\n[Preview] Step 3b · cleaned+near_duplicates")
+            logger.info(f"\n{cleaned_df.head(5)}")
 
         if self.config.get("factcheck_api_key"):
-            print("\n=== Step 4: Running Fact Check ===")
+            logger.info("\n=== Step 4: Running Fact Check ===")
             factcheck_path = self.factcheck()
             results["factchecked_csv"] = factcheck_path
             try:
@@ -364,25 +370,26 @@ class Pipeline:
                 except Exception:
                     df_fc = None
             if df_fc is not None:
-                print("\n[Preview] Step 4 · factchecked"); print(df_fc.head(5))
+                logger.info("\n[Preview] Step 4 · factchecked")
+                logger.info(f"\n{df_fc.head(5)}")
             else:
-                print("\n=== Step 4: Skipping Fact Check (no API key) ===")
+                logger.info("\n=== Step 4: Skipping Fact Check (no API key) ===")
 
-        print("\n=== Pipeline Complete ===")
-        print("Output files:")
+        logger.info("\n=== Pipeline Complete ===")
+        logger.info("Output files:")
         for key, path in results.items():
-            print(f"  {key}: {path}")
+            logger.info(f"  {key}: {path}")
 
         return results
 
 if __name__ == "__main__":
-    print("Starting full pipeline...\n")
+    logger.info("Starting full pipeline...\n")
 
-    pipeline = Pipeline(config_path="config.json")
+    pipeline = Pipeline(config_path="config.toml")
     results = pipeline.run_full_pipeline(skip_download=True)
 
-    print("\nPipeline execution completed successfully!")
-    print("Results summary::")
+    logger.info("\nPipeline execution completed successfully!")
+    logger.info("Results summary::")
     for key, value in results.items():
-        print(f"{key}: {value}")
+        logger.info(f"{key}: {value}")
 

@@ -9,7 +9,8 @@ from concurrent.futures import ThreadPoolExecutor, wait, FIRST_COMPLETED
 from typing import Dict, Optional
 import pandas as pd
 import requests
-from tqdm import tqdm
+from tqdm.auto import tqdm
+from loguru import logger
 
 
 _thread = threading.local()
@@ -41,6 +42,9 @@ class FactChecker:
         max_workers: int = 31,
         max_inflight: int = 200,
         sleep_time: float = 1.0,
+        max_query_size: int = 512,
+        language_code: str = "pt-BR",
+        show_progress_bar: bool = True,
     ):
         """
         Initialize FactChecker.
@@ -50,11 +54,17 @@ class FactChecker:
             max_workers: Maximum number of concurrent threads
             max_inflight: Maximum number of in-flight requests
             sleep_time: Sleep time between requests (seconds)
+            max_query_size: Maximum query size in characters
+            language_code: Language code for API requests
+            show_progress_bar: Whether to show progress bar
         """
         self.api_key = api_key
         self.max_workers = max_workers
         self.max_inflight = max_inflight
         self.sleep_time = sleep_time
+        self.max_query_size = max_query_size
+        self.language_code = language_code
+        self.show_progress_bar = show_progress_bar
     
     def check_claim(self, text: str) -> Dict[str, Optional[str]]:
         """
@@ -77,9 +87,9 @@ class FactChecker:
             r = _get_session().get(
                 BASE_URL,
                 params={
-                    "query": text[:512],
+                    "query": text[:self.max_query_size],
                     "pageSize": 1,
-                    "languageCode": "pt-BR",
+                    "languageCode": self.language_code,
                     "key": self.api_key,
                 },
                 timeout=12,
@@ -161,7 +171,7 @@ class FactChecker:
                     except StopIteration:
                         break
                 
-                pbar = tqdm(total=len(base))
+                pbar = tqdm(total=len(base), desc="Fact checking", disable=not self.show_progress_bar)
                 while inflight:
                     done, inflight = wait(inflight, return_when=FIRST_COMPLETED)
                     for fut in done:
@@ -236,9 +246,9 @@ class FactChecker:
         Returns:
             Path to output CSV
         """
-        print("Running Google Fact Check (streaming + JOIN by rid)...")
+        logger.info("Running Google Fact Check (streaming + JOIN by rid)...")
         tmp_csv = self.run_factcheck_streaming(input_csv, output_dir)
         self.join_with_sqlite(input_csv, tmp_csv, output_csv, output_dir)
-        print("Fact Check saved to:", output_csv)
+        logger.info(f"Fact Check saved to: {output_csv}")
         return output_csv
 

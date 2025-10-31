@@ -1,20 +1,37 @@
 """Configuration management for fakenews-br-data package."""
 
-import json
 import os
 from pathlib import Path
 from typing import Dict, Any, Optional
+from dotenv import load_dotenv
 
+try:
+    import tomli
+except ImportError:
+    try:
+        import tomllib as tomli
+    except ImportError:
+        raise ImportError("tomli or tomllib is required for TOML support")
 
-DEFAULT_CONFIG_PATH = Path.home() / ".fakenews-br-data" / "config.json"
+try:
+    import tomli_w
+except ImportError:
+    raise ImportError("tomli-w is required for writing TOML files")
+
+load_dotenv()
+
+DEFAULT_CONFIG_PATH = Path.home() / ".fakenews-br-data" / "config.toml"
 
 DEFAULT_CONFIG = {
     "factcheck_api_key": "",
     "out_dir": "data",
     "max_workers": 31,
-    "factcheck_sleep": 1,
+    "factcheck_sleep": 1.0,
     "max_inflight": 200,
     "min_tokens": 5,
+    "max_query_size": 512,
+    "language_code": "pt-BR",
+    "show_progress_bar": True,
     "deduplication": {
         "threshold": 0.7,
         "ngram": 5,
@@ -27,7 +44,7 @@ DEFAULT_CONFIG = {
 
 def load_config(path: Optional[str] = None) -> Dict[str, Any]:
     """
-    Load configuration from JSON file.
+    Load configuration from TOML file and environment variables.
     
     Args:
         path: Path to config file. If None, tries default location first,
@@ -42,21 +59,23 @@ def load_config(path: Optional[str] = None) -> Dict[str, Any]:
         if DEFAULT_CONFIG_PATH.exists():
             path = str(DEFAULT_CONFIG_PATH)
         else:
-            return config
+            path = None
     
-    if not os.path.exists(path):
-        raise FileNotFoundError(f"Config file not found: {path}")
+    if path and os.path.exists(path):
+        with open(path, "rb") as f:
+            user_config = tomli.load(f)
+        config.update(user_config)
     
-    with open(path, "r", encoding="utf-8") as f:
-        user_config = json.load(f)
+    factcheck_api_key = os.getenv("FACTCHECK_API_KEY")
+    if factcheck_api_key:
+        config["factcheck_api_key"] = factcheck_api_key
     
-    config.update(user_config)
     return config
 
 
 def save_config(config: Dict[str, Any], path: Optional[str] = None) -> None:
     """
-    Save configuration to JSON file.
+    Save configuration to TOML file.
     
     Args:
         config: Configuration dictionary
@@ -66,6 +85,6 @@ def save_config(config: Dict[str, Any], path: Optional[str] = None) -> None:
         path = str(DEFAULT_CONFIG_PATH)
         DEFAULT_CONFIG_PATH.parent.mkdir(parents=True, exist_ok=True)
     
-    with open(path, "w", encoding="utf-8") as f:
-        json.dump(config, f, indent=2, ensure_ascii=False)
+    with open(path, "wb") as f:
+        tomli_w.dump(config, f)
 

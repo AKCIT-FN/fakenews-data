@@ -2,11 +2,11 @@
 
 import re
 import unicodedata
-import logging
 import pandas as pd
 import demoji
 from typing import Tuple, List
 from urlextract import URLExtract
+from loguru import logger
 
 extractor = URLExtract()
 
@@ -147,7 +147,7 @@ class DatasetCleaner:
         Returns:
             Cleaned DataFrame
         """
-        logging.info(f"[Cleaning] Loading dataset from {path}")
+        logger.info(f"[Cleaning] Loading dataset from {path}")
 
         if path.endswith(".parquet"):
             df = pd.read_parquet(path)
@@ -155,7 +155,7 @@ class DatasetCleaner:
             df = pd.read_csv(path, low_memory=False)
 
         initial_rows = len(df)
-        logging.info(f"[Cleaning] Loaded {initial_rows} rows")
+        logger.info(f"[Cleaning] Loaded {initial_rows} rows")
 
         df["label"] = (
             df["label"]
@@ -178,7 +178,7 @@ class DatasetCleaner:
             })
         )
         df = df[df["label"].isin(["fake", "true"])].copy()
-        logging.info(f"[Cleaning] After label filtering: {len(df)} rows remain")
+        logger.info(f"[Cleaning] After label filtering: {len(df)} rows remain")
 
         df["text_no_url"], df["extracted_urls"] = zip(*df["text"].apply(remove_urls))
         df["text_clean"] = df["text_no_url"].apply(clean_for_factcheck)
@@ -249,13 +249,9 @@ class DatasetCleaner:
 
         df_clean.to_parquet(save_parquet, index=False)
 
-        logging.info(f"[Cleaning] Finished cleaning. {len(df_clean)} rows remain (from {initial_rows})")
-        logging.info(f"[Cleaning] Label distribution:\n{df_clean['label'].value_counts(dropna=False)}")
-        logging.info(f"[Cleaning] Saved cleaned files: {save_csv}, {save_parquet}")
-
-        print("Final cleaned rows:", len(df_clean))
-        print("Label distribution:\n", df_clean["label"].value_counts(dropna=False))
-        print("Saved files:\n", save_csv, "\n", save_parquet)
+        logger.info(f"[Cleaning] Finished cleaning. {len(df_clean)} rows remain (from {initial_rows})")
+        logger.info(f"[Cleaning] Label distribution:\n{df_clean['label'].value_counts(dropna=False)}")
+        logger.info(f"[Cleaning] Saved cleaned files: {save_csv}, {save_parquet}")
 
         return df_clean
 

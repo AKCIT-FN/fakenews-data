@@ -1,9 +1,9 @@
 """Schema normalization functions for different dataset formats."""
 
 import re
-import logging
 import pandas as pd
 from typing import Optional, List
+from loguru import logger
 
 
 def extract_url(text: str) -> Optional[str]:
@@ -112,7 +112,6 @@ def ensure_schema(
     Returns:
         DataFrame with normalized schema
     """
-    logging.getLogger().setLevel(log_level.upper())
 
     id_cols = ["uid", "id", "ID", "post_id", "doc_id", "tweet_id"]
     date_cols = ["date", "data", "created_at", "publish_date", "time", "timestamp"]
@@ -155,7 +154,7 @@ def ensure_schema(
         elif body is not None:
             text = body
         else:
-            logging.warning(f"[Schema] {dataset_name}: no valid text column found")
+            logger.warning(f"[Schema] {dataset_name}: no valid text column found")
             return pd.DataFrame()
 
     url_claim = pick_first(df, url_claim_cols)
@@ -209,7 +208,7 @@ def ensure_schema(
     
     if len(out) > 0:
         label_counts = out["label"].value_counts(dropna=False).to_dict()
-        logging.info(
+        logger.info(
             f"[Schema] {dataset_name}: {len(out)} records | "
             f"Labels → {label_counts}"
         )
