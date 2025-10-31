@@ -157,6 +157,8 @@ class Pipeline:
                     source_description=f"Dataset {dataset_name}",
                     #log_level=self.config.get("log_level", "INFO"),
                 )
+                if "url_review" in df_norm.columns and df_norm["url_review"].isna().all():
+                    logging.info(f"[Pipeline] {dataset_name}: url_review totalmente ausente após normalização")
 
                 if df_norm is None or df_norm.empty:
                     logging.warning(f"[Pipeline] Skipping empty dataset after normalization: {dataset_name}")
@@ -333,11 +335,14 @@ class Pipeline:
         results["merged_csv"] = csv_path
         results["merged_parquet"] = parquet_path
         self._save_dataset_stats(normalized_counts, merged_total=len(df_merged))
+        print("\n[Preview] Step 2 · normalized+merged"); print(df_merged.head(5))
 
         print("\n=== Step 3: Cleaning dataset ===")
         self.clean()
+        df_clean = self.clean()
         results["clean_csv"] = os.path.join(self.out_dir, "FakenewsBR_clean.csv")
         results["clean_parquet"] = os.path.join(self.out_dir, "FakenewsBR_clean.parquet")
+        print("\n[Preview] Step 3 · cleaned"); print(df_clean.head(5))
 
         if self.config.get("enable_deduplication", False):
             print("\n=== Optional: Near-duplicate detection ===")
@@ -345,13 +350,23 @@ class Pipeline:
             cleaned_df = self.add_deduplication(cleaned_df)
             cleaned_df.to_parquet(results["clean_parquet"], index=False)
             logging.info("[Pipeline] Updated cleaned Parquet with near_duplicates column")
+            print("\n[Preview] Step 3b · cleaned+near_duplicates"); print(cleaned_df.head(5))
 
         if self.config.get("factcheck_api_key"):
             print("\n=== Step 4: Running Fact Check ===")
             factcheck_path = self.factcheck()
             results["factchecked_csv"] = factcheck_path
-        else:
-            print("\n=== Step 4: Skipping Fact Check (no API key) ===")
+            try:
+                df_fc = pd.read_csv(factcheck_path, low_memory=False)
+            except Exception:
+                try:
+                    df_fc = pd.read_parquet(factcheck_path)
+                except Exception:
+                    df_fc = None
+            if df_fc is not None:
+                print("\n[Preview] Step 4 · factchecked"); print(df_fc.head(5))
+            else:
+                print("\n=== Step 4: Skipping Fact Check (no API key) ===")
 
         print("\n=== Pipeline Complete ===")
         print("Output files:")
@@ -364,7 +379,7 @@ if __name__ == "__main__":
     print("Starting full pipeline...\n")
 
     pipeline = Pipeline(config_path="config.json")
-    results = pipeline.run_full_pipeline(skip_download=False)
+    results = pipeline.run_full_pipeline(skip_download=True)
 
     print("\nPipeline execution completed successfully!")
     print("Results summary::")
