@@ -120,56 +120,143 @@ Este framework suporta os seguintes conjuntos de dados em português brasileiro:
 
 <mark> Melhorar descrição dos datasets e incluir link </mark>
 
-- [**MuMiN-PT**](https://huggingface.co/datasets/ju-resplande/portuguese-fact-checking): Subconjunto português do MuMiN, foi montado por abordagem top-down: começando de alegações já verificadas por agências de fact-checking e, então, mapeando os posts do X/Twitter (2020–2022).
+- [**MuMiN-PT**](https://huggingface.co/datasets/ju-resplande/portuguese-fact-checking): Subconjunto em português do MuMiN, construído de forma top-down a partir de alegações já verificadas por agências de fact-checking, com posterior mapeamento de posts do X/Twitter (2020–2022).
   
   Tarefa e rótulos
   - Tarefa: classificação de veracidade/misinformation em texto curto (tweets).
-  - Distribuição de classes: ~1.404 instâncias (≈ 1.339 vs 65 na tabela do card), com forte desbalanceamento — a classe minoritária são as verdadeiras após o filtro para PT, o que motivou inclusive a exclusão do MuMiN-PT de alguns experimentos no estudo.
+  - Tamanho: 1.404 instâncias (1.339 falsas / 65 verdadeiras)
+  - Período: 2020–2022
 
-  Esquema (versão “clean” do MuMiN-PT)
-  - Campos visíveis no viewer do dataset específico ju-resplande/MuMiN-PT (1.4k linhas, split único “train” + máscaras):
-    - id (int64)
-    - claim (string, PT)
-    - claim_en (string, EN – tradução do enunciado)
-    - verdict (string, 2 classes)
-    - train_mask, val_mask, test_mask (booleanos) – máscaras para reconstruir partições. 
-
+  Colunas
+    - `id` (*int64*)
+    - `claim` (*string*, PT)
+    - `claim_en` (*string*, EN — tradução do enunciado)
+    - `verdict` (*string*, 2 classes)
+    - `train_mask`, `val_mask`, `test_mask` (*booleanos*, partições)
+  
   Estatísticas pós limpeza
-  - Tamanho médio do texto (palavras): ~18.9 (misinfo) / 16.9 (verdadeiro).
+  - Média de palavras: ~18.9 (misinfo) / 16.9 (verdadeiro).
   - Presença de URL: ~0.3% (misinfo) / 0.0% (verdadeiro).
-  - Período: 2020–2022.
 
-- [**COVID19.BR**](https://huggingface.co/datasets/ju-resplande/portuguese-fact-checking): Fact-checks e notícias sobre COVID-19: Corpus de mensagens de WhatsApp sobre Covid-19 em PT-BR, coletado em 236 grupos públicos entre abril–junho/2020. Abordagem bottom-up.
+- [**COVID19.BR**](https://huggingface.co/datasets/ju-resplande/portuguese-fact-checking): Corpus de mensagens de WhatsApp em português brasileiro sobre COVID-19, coletado em 236 grupos entre abril e junho de 2020, construído por abordagem bottom-up a partir de conteúdos verificados por agências de fact-checking.
 
   Tarefa e rótulos
-  - Classificação binária (label: fake/true). 1.99k linhas no split “train” do viewer. Distribuição após limpeza: 848 falsas / 1.139 verdadeiras.
+  - Classificação binária de veracidade (fake/true)
+  - Tamanho: 1.987 mensagens (848 falsas / 1.139 verdadeiras)
+  - Período: 2020 
 
-  Esquema
-  - Texto: text_no_url.
-  - Rótulos e splits: label, new_split (3 valores; use para reconstruir train/val/test).
-  - Evidências externas: initial_query, claim_query, google_search_results (lista), google_fact_check_results (dict).
-  - Qualidade/duplicatas: near_duplicates (lista), text_urls (lista), metadata (dict).
+  Colunas
+  - `text_no_url` (*string*) — texto limpo da mensagem
+  - `label` (*string*, fake/true)
+  - `new_split` (*string*, indica partição train/val/test)
+  - `initial_query`, `claim_query` (*string*) — termos de busca usados na coleta
+  - `google_search_results` (*list*), `google_fact_check_results` (*dict*) — evidências externas
+  - `near_duplicates`, `text_urls` (*list*), `metadata` (*dict*) — controle de qualidade e duplicatas
 
   Estatísticas úteis (pós-limpeza, do card)
-  - % com URL: 28,9% nas falsas / 56,9% nas verdadeiras.
-  - Comprimento médio (palavras): 167,7 falsas / 111,1 verdadeiras.
-  - Ano: 2020. Domínio: Saúde.
+  - Média de palavras: 167,7 (falsas) / 111,1 (verdadeiras)
+  - Presença de URLs: 28,9% (falsas) / 56,9% (verdadeiras)
 
-- [**Fake.br**](https://huggingface.co/datasets/ju-resplande/portuguese-fact-checking): Corpus de notícias brasileiras com pares alinhados de textos falsos e verdadeiros, coletados na web e pareados por similaridade lexical. Período alvo: jan/2016–jan/2018.
+- [**Fake.br**](https://huggingface.co/datasets/ju-resplande/portuguese-fact-checking): Corpus de notícias brasileiras com pares alinhados de textos falsos e verdadeiros, coletados na web entre janeiro de 2016 e janeiro de 2018. As amostras foram pareadas por similaridade lexical, garantindo correspondência temática entre versões fake e true.
 
   Tarefa e rótulos:
-  - Tarefa: classificação binária de veracidade em notícias longas. 
-  - Balanceamento: equilibrado 50/50 no “clean” (3.580/3.580).
+  - Tarefa: Classificação binária de veracidade em notícias longas 
+  - Tamanho: 7.160 textos (3.580 falsos / 3.580 verdadeiros)
+  - Período: 2016–2018
 
-  Esquema no pacote combinado (clean)
-  - Colunas expostas no viewer do dataset combinado incluem, entre outras: text_no_url, label (fake/true), old_split, new_split, text_urls, near_duplicates, google_search_results, google_fact_check_results, metadata. Algumas podem estar vazias dependendo da instância.
-  - Estatísticas agregadas para Fake.Br: média de palavras ~181,4 (falsas) / 183,1 (verdadeiras).
+  Colunas
+  - `text_no_url` (*string*) — texto principal sem URLs
+  - `label` (*string*, fake/true)
+  - `old_split`, `new_split` (*string*, partições de treino/val/test)
+  - `text_urls`, `near_duplicates` (*list*) — controle de duplicatas
+  - `google_search_results` (*list*), `google_fact_check_results` (*dict*) — evidências externas
+  - `metadata` (*dict*) — informações adicionais
 
+  Estatísticas (pós-limpeza)
+  - Média de palavras: 181,4 (falsas) / 183,1 (verdadeiras)
 
-- **FakeTweetBr**: Tweets em português rotulados
-- **FakeWhatsAppBR**: Mensagens do WhatsApp de 2018
-- **Datasets do Kaggle**: Coleções de notícias verdadeiras e falsas
-- **LLM4BR**: 300 artigos de notícias filtrados
+- [**FakeTweetBr**](https://github.com/prc992/FakeTweet.Br): Corpus de tweets em português brasileiro rotulados como falsos ou verdadeiros, criado para estudos de verificação automática de rumores e classificação de notícias falsas em redes sociais. O conjunto foi compilado a partir de publicações no Twitter, refletindo temas variados de interesse público.
+
+  Tarefa e rótulos:
+  - Tarefa: Classificação binária de veracidade em texto curto (tweets) 
+  - Tamanho: 299 tweets (206 falsos / 93 verdadeiros)
+  - Período: 2010-2019
+
+  Colunas
+  - `id` (*int64*) — identificador do tweet  
+  - `subject` (*string*) — tema ou assunto do tweet  
+  - `text` (*string*) — conteúdo textual do tweet  
+  - `classificacao` (*string*, fake/true) — rótulo de veracidade  
+  - `date` (*string*) — data de publicação  
+  - `retweets` (*int64*) — número de retweets  
+  - `favorites` (*int64*) — número de curtidas  
+  - `permalink` (*string*) — URL do tweet original 
+
+  Estatísticas
+  - Média de palavras: 29,39 (falsas) / 29,71 (verdadeiras)
+
+- [**FakeWhatsAppBR**](https://github.com/cabrau/FakeWhatsApp.Br): Corpus anotado e anonimizado de mensagens públicas de WhatsApp em português brasileiro, criado para estudos de detecção automática de desinformação textual e identificação de usuários maliciosos. O conjunto foi compilado durante as eleições presidenciais brasileiras de 2018, a partir de grupos públicos.
+
+  Tarefa e rótulos:
+  - Tarefa: Classificação binária de desinformação (misinformation / não misinformation) 
+  - Tamanho: 282601 (11412 falsos / 9877 verdadeiros / sem rotulos 261312)
+  - Período: 2018
+
+  Colunas
+  - `id` (*int64*) — identificador único do usuário  
+  - `date` (*string*) — data de envio da mensagem  
+  - `ddi`, `country`, `country_iso3`, `ddd`, `state` — metadados geográficos e telefônicos  
+  - `midia` (*bool*) — indica se a mensagem contém mídia (1/0)  
+  - `url` (*bool*) — presença de URLs (1/0)  
+  - `characters`, `words` (*int64*) — comprimento do texto  
+  - `viral` (*bool*) — mensagem viral (aparece ≥ 5 vezes no corpus)  
+  - `shares` (*int64*) — número de ocorrências do mesmo texto  
+  - `text` (*string*) — conteúdo textual da mensagem  
+  - `misinformation` (*int*, 1 = contém desinformação, 0 = não, -1 = não rotulada)
+
+  Estatísticas
+  - Média de palavras: 121,72 (falsas) / 68,16 (verdadeiras)
+
+- [**Fake news in Portuguese**](www.kaggle.com/datasets/fabioselau/fakes-news-portuguese): Corpus de notícias em português brasileiro rotuladas como falsas ou verdadeiras, publicado no Kaggle. O conjunto foi construído a partir de notícias coletadas na web entre 2005 e 2022, organizadas em dois arquivos (`fake.csv` e `true.csv`).
+
+  Tarefa e rótulos:
+  - Tarefa: Classificação binária de veracidade (fake/true) 
+  - Tamanho: 23.198 notícias (20.478 falsas / 2.720 verdadeiras)
+  - Período: 2005–2022
+
+  Colunas
+  - `title` (*string*) — título da notícia  
+  - `text` (*string*) — corpo textual da notícia  
+  - `origin` (*string*) — origem declarada ou categoria do conteúdo  
+  - `url` (*string*) — link original da notícia  
+  - `label` (*int*, 1 = fake, 0 = true) — rótulo de veracidade  
+  - `publisher_name` (*string*) — nome do veículo de publicação  
+  - `publisher_site` (*string*) — domínio ou site da fonte  
+  - `date` (*string*) — data de publicação (AAAA-MM-DD)  
+  - `word_count` (*int64*) — número de palavras no texto
+
+  Estatísticas
+  - Média de palavras: 18,72 (falsas) / 15,24 (verdadeiras)
+
+- [**LLM4BrazilianFakeNews**](https://github.com/GoloMarcos/LLM4BrazilianFakeNews): Corpus de notícias políticas brasileiras criado para avaliar o desempenho de modelos de linguagem de larga escala (LLMs) — tanto open-source quanto proprietários — na detecção de desinformação textual. O conjunto foi proposto em um estudo que investiga a eficácia de LLMs na identificação de fake news sobre política nacional, destacando o potencial de modelos abertos como alternativa aos comerciais.
+
+  Tarefa e rótulos:
+  - Tarefa: Classificação binária de veracidade (fake/true) 
+  - Tamanho: 300 notícias (148 falsas / 152 verdadeiras)
+  - Período: Não especificado
+
+  Colunas
+  - `ID` (*int64*) — identificador único do artigo  
+  - `Fonte` (*string*) — veículo ou origem da notícia  
+  - `text` (*string*) — texto processado da notícia  
+  - `Texto_Original` (*string*) — texto original sem pré-processamento  
+  - `Tematica` (*string*) — tema principal do conteúdo (ex.: política, economia)  
+  - `Rótulo` (*string*, fake/true) — rótulo de veracidade  
+  - `Tipo_Dado` (*string*) — origem do dado (ex.: real ou gerado)  
+  - `word_count` (*int64*) — número de palavras do texto  
+
+  Estatísticas
+  - Média de palavras: 427,9 (falsas) / 659,3 (verdadeiras)
 
 ## API Pública
 
