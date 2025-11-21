@@ -15,8 +15,33 @@ pip install git+https://github.com/Vrt-sources/fakenews-data
 ```
 
 **Funcionalidades extras**
-- `fakenews-br-data[huggingface]`: <mark>Explicar o que é </mark>
-- - `fakenews-br-data[dev]`: <mark>Explicar o que é </mark>
+
+O `fakenews-br-data` define alguns *extras* de instalação no `pyproject.toml`.  
+Eles permitem instalar conjuntos opcionais de dependências usando a sintaxe:
+```bash
+pip install "fakenews-br-data[extra]"
+```
+Atualmente existem dois extras principais: `huggingface` e `dev`.
+
+- `fakenews-br-data[huggingface]`: Adiciona dependências usadas em fluxos de trabalho de download/integração com datasets hospedados na stack do Hugging Face.
+    - Instalação a partir do PyPI:
+        ```bash
+        pip install "fakenews-br-data[huggingface]"
+        ```
+    - Instalação em modo desenvolvimento (a partir do repositório clonado):
+        ```bash
+        pip install -e ".[huggingface]"
+        ```
+  
+- `fakenews-br-data[dev]`: Agrupa dependências voltadas para desenvolvimento do projeto, como ferramentas de testes e formatação de código.
+    - Instalação a partir do PyPI:
+        ```bash
+        pip install "fakenews-br-data[dev]"
+        ```
+    - Instalação em modo desenvolvimento (a partir do repositório clonado):
+        ```bash
+        pip install -e ".[dev]"
+        ```
 
 
 ## Estrutura
