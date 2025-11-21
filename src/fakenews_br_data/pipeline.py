@@ -23,11 +23,11 @@ DATASET_DESCRIPTIONS = {
     "COVID19.BR": "Mensagens de WhatsApp em português brasileiro sobre COVID-19 coletadas em grupos públicos em 2020.",
     "Fake.br": "Notícias brasileiras com pares alinhados de textos falsos e verdadeiros sobre os mesmos temas.",
     "FakeTweetBr": "Tweets em português brasileiro rotulados quanto à veracidade para estudo de rumores e fake news.",
-    "FakeWhatsAppBR": "Mensagens públicas de WhatsApp em português brasileiro anotadas para detecção de desinformação.",
-    "Fake news in Portuguese": "Notícias em português brasileiro rotuladas como falsas ou verdadeiras (corpus Kaggle).",
-    "LLM4BrazilianFakeNews": "Notícias políticas brasileiras usadas para avaliar LLMs na detecção de desinformação textual.",
+    "FakeWhatsApp.BR_2018": "Mensagens públicas de WhatsApp em português brasileiro de 2018, anotadas para detecção de desinformação.",
+    "LLM4BR_300": "Conjunto de 300 notícias políticas brasileiras usadas para avaliar LLMs na detecção de desinformação textual.",
+    "fake": "Notícias falsas do dataset Kaggle fabioselau/fakes-news-portuguese.",
+    "true": "Notícias verdadeiras do dataset Kaggle fabioselau/fakes-news-portuguese.",
 }
-
 
 
 class Pipeline:
