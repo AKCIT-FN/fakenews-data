@@ -1,23 +1,38 @@
-"""Schema normalization functions for different dataset formats."""
-
 import re
 import pandas as pd
 from typing import Optional, List
 from loguru import logger
 
+URL_RE = re.compile(
+    r'\b(?:https?://|www\.)'        
+    r'(?:[a-zA-Z0-9-]+\.)+'         
+    r'(?:[a-zA-Z]{2,63})'           
+    r'(?:/[^\s]*)?',                
+    flags=re.IGNORECASE,
+)
+NUMERIC_LIKE = re.compile(r'^\d+(?:[.,]\d+)*$')
 
 def extract_url(text: str) -> Optional[str]:
-    """
-    Extract first URL from text.
-    
-    Args:
-        text: Text to search for URLs
-        
-    Returns:
-        First URL found, or None
-    """
-    m = re.search(r"https?://\S+", str(text) if text is not None else "")
-    return m.group(0) if m else None
+    if text is None:
+        return None
+
+    text = str(text)
+
+    # varre token a token para poder pular coisas numéricas
+    for token in text.split():
+        # ignora tokens claramente numéricos (50.000, 1.234, 3,14 etc)
+        if NUMERIC_LIKE.match(token):
+            continue
+
+        m = URL_RE.search(token)
+        if m:
+            url = m.group(0)
+            # normaliza 'www.' para ter esquema, se quiser
+            if url.lower().startswith("www."):
+                url = "http://" + url
+            return url
+
+    return None
 
 
 def extract_tweet_id(url: str) -> Optional[str]:
@@ -141,7 +156,6 @@ def ensure_schema(
     url_claim_cols = ["url", "link", "permalink", "source", "source_url", "url_claim"]
     url_review_cols = ["review_url", "url_review", "factcheck_url", "url_factcheck"]
 
-    orig_id = pick_first(df, id_cols)
     text = pick_first(df, text_cols)
 
     if text is None or text.dropna().empty:
@@ -194,7 +208,6 @@ def ensure_schema(
 
     out = pd.DataFrame(
         {
-            "orig_id": orig_id.astype(str) if orig_id is not None else None,
             "text": text,
             "label": label,
             "url_claim": url_claim,
