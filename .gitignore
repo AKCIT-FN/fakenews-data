@@ -31,3 +31,4 @@ data/
 *.parquet
 *.csv
 !tests/**/*.csv
+kaggle.json
