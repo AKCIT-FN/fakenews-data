@@ -18,6 +18,17 @@ from fakenews_br_data.deduplication import DuplicateDetector
 from fakenews_br_data.factcheck import FactChecker
 from fakenews_br_data.utils import save_manifest
 
+DATASET_DESCRIPTIONS = {
+    "MuMiN-PT": "Subconjunto em português do MuMiN com alegações verificadas e tweets associados.",
+    "COVID19.BR": "Mensagens de WhatsApp em português brasileiro sobre COVID-19 coletadas em grupos públicos em 2020.",
+    "Fake.br": "Notícias brasileiras com pares alinhados de textos falsos e verdadeiros sobre os mesmos temas.",
+    "FakeTweetBr": "Tweets em português brasileiro rotulados quanto à veracidade para estudo de rumores e fake news.",
+    "FakeWhatsAppBR": "Mensagens públicas de WhatsApp em português brasileiro anotadas para detecção de desinformação.",
+    "Fake news in Portuguese": "Notícias em português brasileiro rotuladas como falsas ou verdadeiras (corpus Kaggle).",
+    "LLM4BrazilianFakeNews": "Notícias políticas brasileiras usadas para avaliar LLMs na detecção de desinformação textual.",
+}
+
+
 
 class Pipeline:
     """
@@ -150,12 +161,16 @@ class Pipeline:
 
                 dataset_name = os.path.splitext(fn)[0]
                 source_type = self.source_type_map.get(dataset_name, "news")
+                description = DATASET_DESCRIPTIONS.get(
+                    dataset_name,
+                    f"Dataset {dataset_name}",  # fallback se não estiver no dict
+                )
+
                 df_norm = ensure_schema(
                     df,
                     dataset_name=dataset_name,
                     source_type=source_type,
-                    source_description=f"Dataset {dataset_name}",
-                    #log_level=self.config.get("log_level", "INFO"),
+                    source_description=description,
                 )
                 if "url_review" in df_norm.columns and df_norm["url_review"].isna().all():
                     logger.info(f"[Pipeline] {dataset_name}: url_review totalmente ausente após normalização")
@@ -197,7 +212,6 @@ class Pipeline:
             "date_iso",
             "tweet_id",
             "url_claim",
-            "url_review",
             "text",
         ]
         df_final = df_final.reindex(
@@ -240,7 +254,6 @@ class Pipeline:
             "label",
             "text",
             "url_claim",
-            "url_review",
             "dataset_name",
             "source_type",
             "source_description",
