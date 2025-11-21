@@ -220,6 +220,8 @@ class DatasetCleaner:
             c for c in df_clean.columns if c not in cols_order_clean
         ]
         df_clean = df_clean.reindex(columns=cols_order_clean)
+        if "orig_id" in df_clean.columns:
+            df_clean.drop(columns=["orig_id"], inplace=True)
 
         df_clean.to_csv(save_csv, index=False)
 
