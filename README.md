@@ -139,6 +139,140 @@ Veja `config.example.json` para um template completo.
 fakenews-br-data pipeline  --tag out_dir=data  --tag max_workers=31  --tag factcheck_sleep=1   --tag factcheck_api_key= <API_KEY> 
 ```
 
+## Esquema de colunas e fluxo de transformação
+
+O `fakenews-br-data` organiza os dados em três grandes etapas:
+
+1. **Normalização de esquema** (`schema.ensure_schema` + `Pipeline.normalize_and_merge`)
+2. **Limpeza de texto e filtragem** (`DatasetCleaner.clean_dataset`)
+3. **Enriquecimento com fact-checking** (`FactChecker.process_dataset`)
+
+Abaixo descrevemos as colunas de entrada e saída em cada etapa.
+
+### 1.1. Esquema padrão (saída de `ensure_schema` / `Pipeline.normalize_and_merge`)
+
+A função `ensure_schema` recebe um `DataFrame` bruto (com nomes de colunas variados, dependendo do dataset) e o converte para um esquema canônico. Após a etapa de normalização e merge, o `DataFrame` resultante (por exemplo, `FakenewsBR_merged.csv`) contém, no mínimo, as colunas:
+
+- **dataset_name** (`str`)  
+  Nome canônico do dataset de origem (ex.: `Fake.br`, `COVID19.BR`, `MuMiN-PT`, `FakeWhatsApp.BR_2018`, `LLM4BR_300`, `fake`, `true`).
+
+- **source_type** (`str`)  
+  Tipo de fonte, utilizado para caracterizar a origem do conteúdo (ex.: `"news"`, `"whatsapp messages"`, `"tweets"` etc.).
+
+- **source_description** (`str`)  
+  Descrição textual do dataset/fonte, normalmente obtida a partir do dicionário `DATASET_DESCRIPTIONS`, com um resumo do que aquele conjunto representa.
+
+- **orig_id** (`str`)  
+  Identificador original da instância no dataset de origem (por exemplo, ID de notícia, ID de mensagem, ID interno do corpus). É mantido como referência para rastreabilidade.
+
+- **text** (`str`)  
+  Texto principal da instância já unificado. Dependendo do dataset, pode ser:
+  - o próprio campo de texto original, ou  
+  - a concatenação de título + corpo (quando separados em colunas diferentes).
+
+- **label** (`str`)  
+  Rótulo de veracidade conforme o dataset de origem (tipicamente algo mapeado para valores como `"fake"` e `"true"`; outros rótulos podem existir conforme o corpus original).
+
+- **url_claim** (`str` ou nulo)  
+  URL associada à notícia, tweet ou mensagem original (a “fonte” da alegação). Nem todos os datasets possuem esse campo.
+
+- **url_review** (`str` ou nulo)  
+  URL para a checagem de fatos associada (quando o dataset já inclui links de fact-check). Pode estar completamente ausente em alguns datasets.
+
+- **date_iso** (`str` no formato `YYYY-MM-DD` ou nulo)  
+  Data da instância normalizada para um formato ISO amigável. A função tenta extrair e normalizar datas a partir de diferentes colunas/formatos no dataset original.
+
+Além dessas, após a chamada de `assign_uids` dentro do `Pipeline`:
+
+- **uid** (`int`)  
+  Identificador sequencial global criado pelo `assign_uids`, garantindo um ID único por linha ao longo de todos os datasets mesclados.
+
+Em casos específicos, o pipeline também pode adicionar:
+
+- **tweet_id** (`str` ou nulo)  
+  Para datasets oriundos de X/Twitter, pode ser extraído a partir de `url_claim` usando `extract_tweet_id`. Fica vazio para instâncias sem URL de tweet.
+
+Outras colunas específicas de cada dataset podem ser mantidas “como vieram” e são preservadas, ainda que não sejam obrigatórias para o fluxo principal.
+
+### 1.2. Saída do `DatasetCleaner.clean_dataset`
+
+A etapa de limpeza trabalha, em geral, sobre o arquivo mesclado (`FakenewsBR_merged.csv`) gerado pelo `Pipeline`, e produz um arquivo limpo (`FakenewsBR_clean.csv` / `FakenewsBR_clean.parquet`).
+
+**Entrada esperada:**
+
+- As colunas padrão descritas em 1.1 (**dataset_name**, **source_type**, **source_description**, **orig_id**, **text**, **label**, **url_claim**, **url_review**, **date_iso**, **uid**, opcionalmente **tweet_id**).
+- Colunas específicas de cada dataset podem estar presentes, mas não são obrigatórias.
+- Uma coluna opcional **language** pode aparecer em alguns datasets; ela é descartada durante a limpeza.
+
+**Colunas novas e colunas transformadas na saída:**
+
+- **text_no_url** (`str`)  
+  Versão de `text` com URLs removidas, preservando apenas o conteúdo textual.
+
+- **extracted_urls** (lista serializada ou `str`)  
+  URLs extraídas do texto original. Útil para análise posterior ou reconstrução do contexto.
+
+- **text_clean** (`str`)  
+  Texto padronizado para uso em fact-checking e modelos de NLP. Inclui:
+  - remoção de URLs (a partir de `text_no_url`),  
+  - normalização de acentos,  
+  - remoção de emojis,  
+  - limpeza de aspas externas e espaços redundantes.
+
+- **is_duplicated** (`bool`)  
+  Indicador de duplicatas de conteúdo textual, computado sobre `text_clean`:
+  - por `dataset_name`, quando essa coluna está presente, ou  
+  - globalmente, quando não há `dataset_name`.
+
+- **is_null** (`bool`)  
+  Marca instâncias cujo `text_clean` está ausente ou nulo.
+
+- **too_short** (`bool`)  
+  Marca instâncias cujo `text_clean` tem menos tokens do que o mínimo configurado (`min_tokens`), por padrão 3.
+
+A saída filtrada (**DataFrame limpo**) contém apenas as linhas onde:
+
+- `is_null == False`  
+- `is_duplicated == False`  
+- `too_short == False`  
+
+e mantém as colunas canônicas:
+
+- **dataset_name**, **source_type**, **source_description**  
+- **label**, **date_iso**, **orig_id**, **tweet_id** (quando existir)  
+- **url_claim**, **url_review**, **text**, **text_clean**
+
+bem como quaisquer colunas adicionais que o usuário tenha no dataset (por exemplo, `uid`, flags auxiliares, etc.).
+
+### 1.3. Saída do `FactChecker.process_dataset`
+
+A etapa de fact-checking recebe, em geral, o arquivo limpo (`FakenewsBR_clean.csv`) e produz um arquivo enriquecido (`FakenewsBR_factchecked.csv`).
+
+**Entrada esperada:**
+
+- Deve conter, no mínimo:
+  - **orig_id** (`str`): para rastreio da instância original.
+  - **text** (`str`): texto da alegação a ser enviado para a API de Fact Check.
+- Idealmente, é o mesmo esquema produzido por `DatasetCleaner.clean_dataset`, mantendo todas as colunas padrão (dataset, rótulo, datas, etc.).
+
+**Colunas adicionadas na saída:**
+
+Para cada linha, é feita uma consulta à Google Fact Check Tools API usando o conteúdo de `text`. O resultado é anexado como novas colunas:
+
+- **factcheck_rating** (`str` ou nulo)  
+  Avaliação textual retornada pela API (por exemplo, termos equivalentes a “True”, “False”, “Misleading”, dependendo do provedor de checagem).
+
+- **factcheck_claimant** (`str` ou nulo)  
+  Nome da entidade ou pessoa associada à alegação (claimant) na base de fact-check.
+
+- **factcheck_url** (`str` ou nulo)  
+  URL da página de checagem de fatos utilizada como referência para aquela instância.
+
+Todas as demais colunas da entrada são preservadas.  
+Quando não há resultado de fact-check para um determinado texto, as colunas `factcheck_*` vêm como `None`/vazias para aquela linha.
+
+---
+
 ## Fontes de Datasets
 
 Este framework suporta os seguintes conjuntos de dados em português brasileiro:
