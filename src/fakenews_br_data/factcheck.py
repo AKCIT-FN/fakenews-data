@@ -119,15 +119,12 @@ class FactChecker:
         """Process a single row."""
         res = self.check_claim(row["text"])
         res["rid"] = row["rid"]
-        res["orig_id"] = row["orig_id"]
         return res
     
     def _rows_iter(self, df: pd.DataFrame):
         """Iterate over DataFrame rows."""
-        for rid, oid, txt in zip(
-            df["rid"].values, df["orig_id"].values, df["text"].values
-        ):
-            yield {"rid": int(rid), "orig_id": oid, "text": txt}
+        for rid, txt in zip(df["rid"].values, df["text"].values):
+            yield {"rid": int(rid), "text": txt}
     
     def run_factcheck_streaming(
         self, input_csv: str, output_dir: str
@@ -143,7 +140,7 @@ class FactChecker:
             Path to temporary results CSV
         """
         base = pd.read_csv(
-            input_csv, usecols=["orig_id", "text"]
+            input_csv, usecols=["text"]
         ).reset_index().rename(columns={"index": "rid"})
         
         os.makedirs(output_dir, exist_ok=True)
@@ -154,7 +151,6 @@ class FactChecker:
                 f,
                 fieldnames=[
                     "rid",
-                    "orig_id",
                     "factcheck_rating",
                     "factcheck_claimant",
                     "factcheck_url",
@@ -207,13 +203,11 @@ class FactChecker:
             n = len(chunk)
             chunk.insert(0, "rid", range(offset, offset + n))
             offset += n
-            if "orig_id" in chunk.columns:
-                chunk["orig_id"] = chunk["orig_id"].astype(str)
             chunk.to_sql("base", con, if_exists="append", index=False)
         con.execute("CREATE INDEX IF NOT EXISTS idx_base_rid ON base(rid)")
 
         for chunk in pd.read_csv(
-            tmp_csv, chunksize=100_000, dtype={"rid": int, "orig_id": str}
+            tmp_csv, chunksize=100_000, dtype={"rid": int}
         ):
             chunk.to_sql("fc", con, if_exists="append", index=False)
         con.execute("CREATE INDEX IF NOT EXISTS idx_fc_rid ON fc(rid)")
