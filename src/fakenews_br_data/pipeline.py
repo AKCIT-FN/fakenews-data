@@ -137,6 +137,65 @@ class Pipeline:
                     files.append(os.path.join(root, fn))
         return files
 
+    def _clean_url_claim(self, df: pd.DataFrame, dataset_name: str) -> pd.DataFrame:
+        """
+        Limpa a coluna url_claim:
+        - Converte valores obviamente inválidos (0, 1, numéricos puros etc.) em NA.
+        - Mantém apenas strings que parecem ser URLs válidas.
+        """
+        if df is None or df.empty or "url_claim" not in df.columns:
+            return df
+
+        import re
+        from urllib.parse import urlparse
+
+        def is_probably_url(value: str) -> bool:
+            s = value.strip()
+            if not s:
+                return False
+
+            # Valores que sabemos que são lixo
+            if s in {"0", "1"}:
+                return False
+
+            # Numérico puro: 123, 50.000, 3,14 etc.
+            if re.fullmatch(r"[0-9]+([.,][0-9]+)?", s):
+                return False
+
+            # Tenta interpretar como URL (adiciona esquema se faltar)
+            candidate = s
+            if not re.match(r"^[a-zA-Z][a-zA-Z0-9+.-]*://", candidate):
+                candidate = "http://" + candidate
+
+            parsed = urlparse(candidate)
+
+            # Regra simples: precisa ter host com pelo menos um ponto.
+            if not parsed.netloc or "." not in parsed.netloc:
+                return False
+
+            return True
+
+        before = df["url_claim"].notna().sum()
+
+        def normalize(v):
+            if pd.isna(v):
+                return pd.NA
+            s = str(v).strip()
+            if not is_probably_url(s):
+                return pd.NA
+            return s
+
+        df = df.copy()
+        df["url_claim"] = df["url_claim"].map(normalize)
+
+        after = df["url_claim"].notna().sum()
+        logger.info(
+            f"[Pipeline] {dataset_name}: limpeza de url_claim "
+            f"({before} valores não nulos -> {after} URLs plausíveis)"
+        )
+        return df
+
+
     def normalize_and_merge(
         self, local_files: Optional[Dict[str, Dict[str, str]]] = None
     ) -> tuple[pd.DataFrame, Dict[str, int]]:
@@ -172,6 +231,10 @@ class Pipeline:
                     source_type=source_type,
                     source_description=description,
                 )
+
+                # Limpa url_claim (remove 0, 1, valores numéricos e não-URLs evidentes)
+                df_norm = self._clean_url_claim(df_norm, dataset_name)
+
                 if "url_review" in df_norm.columns and df_norm["url_review"].isna().all():
                     logger.info(f"[Pipeline] {dataset_name}: url_review totalmente ausente após normalização")
 
@@ -310,6 +373,116 @@ class Pipeline:
         logger.info("[Pipeline] Near-duplicate detection finished")
         return df
     
+    def _unify_url_columns(self, df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Unifica colunas de URL e remove colunas auxiliares no dataset final:
+        - Garante que url_review exista.
+        - Preenche url_review com valores de url_claim onde url_review estiver vazia.
+        - Remove SEMPRE a coluna url_claim ao final, se existir.
+        - Remove SEMPRE a coluna uid, se existir.
+        """
+        if df is None or df.empty:
+            return df
+
+        df = df.copy()
+
+        # --- Unificação url_claim -> url_review (se url_claim existir) ---
+        if "url_claim" in df.columns:
+            # Garante que url_review exista
+            if "url_review" not in df.columns:
+                logger.info("[Pipeline] Criando coluna url_review (não existia).")
+                df["url_review"] = pd.NA
+
+            # Preenche url_review com url_claim onde url_review estiver vazia
+            mask = df["url_review"].isna() & df["url_claim"].notna()
+            if mask.any():
+                logger.info(f"[Pipeline] Preenchendo url_review com {mask.sum()} valores de url_claim.")
+                df.loc[mask, "url_review"] = df.loc[mask, "url_claim"]
+
+            # Remove SEMPRE url_claim após a unificação
+            logger.info("[Pipeline] Removendo coluna url_claim após unificação.")
+            df = df.drop(columns=["url_claim"])
+
+        # --- Remoção do uid no dataset final ---
+        if "uid" in df.columns:
+            logger.info("[Pipeline] Removendo coluna uid do dataset final.")
+            df = df.drop(columns=["uid"])
+
+        return df
+
+        """
+        Unifica colunas de URL e remove url_claim:
+        - Garante que url_review exista.
+        - Preenche url_review com valores de url_claim onde url_review estiver vazia.
+        - Remove SEMPRE a coluna url_claim ao final.
+        """
+        if df is None or df.empty:
+            return df
+
+        df = df.copy()
+
+        # Se não houver url_claim, nada a fazer
+        if "url_claim" not in df.columns:
+            return df
+
+        # Garante que url_review exista
+        if "url_review" not in df.columns:
+            logger.info("[Pipeline] Criando coluna url_review (não existia).")
+            df["url_review"] = pd.NA
+
+        # Preenche url_review com url_claim onde url_review estiver vazia
+        mask = df["url_review"].isna() & df["url_claim"].notna()
+        if mask.any():
+            logger.info(f"[Pipeline] Preenchendo url_review com {mask.sum()} valores de url_claim.")
+            df.loc[mask, "url_review"] = df.loc[mask, "url_claim"]
+
+        # Remove SEMPRE url_claim após a unificação
+        logger.info("[Pipeline] Removendo coluna url_claim após unificação.")
+        df = df.drop(columns=["url_claim"])
+
+        return df
+        """
+        Unifica colunas de URL:
+        - Preenche url_review com valores de url_claim quando url_review estiver vazia.
+        - Cria url_review a partir de url_claim se url_review não existir.
+        - Remove url_claim se, após a unificação, só restarem valores vazios/NA.
+        """
+        if df is None or df.empty:
+            return df
+
+        df = df.copy()
+
+        # Se não houver url_claim, nada a fazer
+        if "url_claim" not in df.columns:
+            return df
+
+        # Se não houver url_review, criamos a partir de url_claim (se houver algo útil)
+        if "url_review" not in df.columns:
+            if df["url_claim"].notna().any():
+                logger.info("[Pipeline] Criando coluna url_review a partir de url_claim (url_review ausente).")
+                df["url_review"] = df["url_claim"]
+            else:
+                # url_claim existe mas só tem vazios → removemos
+                non_empty_claim = df["url_claim"].notna() & (df["url_claim"].astype(str).str.strip() != "")
+                if not non_empty_claim.any():
+                    logger.info("[Pipeline] Removendo coluna url_claim (apenas valores vazios).")
+                    df = df.drop(columns=["url_claim"])
+                return df
+        # 1) Preenche url_review com url_claim quando vazio
+        mask = df["url_review"].isna() & df["url_claim"].notna()
+        if mask.any():
+            logger.info(f"[Pipeline] Preenchendo url_review com {mask.sum()} valores de url_claim.")
+            df.loc[mask, "url_review"] = df.loc[mask, "url_claim"]
+
+        # 2) Verifica se ainda sobra algo em url_claim; se não, dropa a coluna
+        non_empty_claim = df["url_claim"].notna() & (df["url_claim"].astype(str).str.strip() != "")
+        if not non_empty_claim.any():
+            logger.info("[Pipeline] Removendo coluna url_claim (apenas valores vazios após unificação).")
+            df = df.drop(columns=["url_claim"])
+
+        return df
+
+
     def factcheck(self, input_path: Optional[str] = None, output_path: Optional[str] = None) -> str:
         """Run Google Fact Check on dataset."""
         api_key = self.config.get("factcheck_api_key")
@@ -324,7 +497,7 @@ class Pipeline:
 
         checker = FactChecker(
             api_key=api_key,
-            max_workers=self.config.get("max_workers", 31),
+            max_workers=self.config.get("max_workers", 5),
             max_inflight=self.config.get("max_inflight", 200),
             sleep_time=self.config.get("factcheck_sleep", 1.0),
             max_query_size=self.config.get("max_query_size", 512),
@@ -334,7 +507,7 @@ class Pipeline:
 
         return checker.process_dataset(input_path, output_path, self.out_dir)
     
-    def run_full_pipeline(self, skip_download: bool = False) -> Dict[str, str]:
+    def run_full_pipeline(self, skip_download: bool = True) -> Dict[str, str]:
         """Run complete pipeline from download to fact-checking."""
         results = {}
 
@@ -375,6 +548,8 @@ class Pipeline:
             logger.info("\n=== Step 4: Running Fact Check ===")
             factcheck_path = self.factcheck()
             results["factchecked_csv"] = factcheck_path
+
+            # Lê o resultado do fact-check (CSV ou Parquet)
             try:
                 df_fc = pd.read_csv(factcheck_path, low_memory=False)
             except Exception:
@@ -382,8 +557,18 @@ class Pipeline:
                     df_fc = pd.read_parquet(factcheck_path)
                 except Exception:
                     df_fc = None
+
             if df_fc is not None:
-                logger.info("\n[Preview] Step 4 · factchecked")
+                # Unifica url_claim/url_review e remove url_claim se ficar vazia
+                df_fc = self._unify_url_columns(df_fc)
+
+                # Salva de volta no mesmo caminho
+                if factcheck_path.lower().endswith(".csv"):
+                    df_fc.to_csv(factcheck_path, index=False)
+                else:
+                    df_fc.to_parquet(factcheck_path, index=False)
+
+                logger.info("\n[Preview] Step 4 · factchecked (URLs unificadas)")
                 logger.info(f"\n{df_fc.head(5)}")
             else:
                 logger.info("\n=== Step 4: Skipping Fact Check (no API key) ===")
