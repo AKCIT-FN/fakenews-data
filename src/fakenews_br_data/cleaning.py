@@ -62,6 +62,50 @@ def remove_emojis(text: str) -> str:
 def remove_urls(text: str) -> Tuple[str, List[str]]:
     """
     Remove URLs from text and return both cleaned text and extracted URLs.
+
+    Args:
+        text: Input text
+
+    Returns:
+        Tuple of (cleaned text, list of URLs found)
+    """
+    if not isinstance(text, str):
+        return text, []
+
+    urls = extractor.find_urls(text)
+
+    # Filtro para descartar "URLs" que são, na prática, números disfarçados (ex.: "50.OOO")
+    def is_spurious_url(u: str) -> bool:
+        if not isinstance(u, str):
+            return True
+        s = u.strip()
+        if not s:
+            return True
+
+        # Normaliza: minúsculas e troca 'o'/'O' por '0' para detectar coisas tipo "50.OOO"
+        s_norm = s.lower()
+        s_numeric_candidate = s_norm.replace("o", "0")
+
+        # Se depois dessa normalização virar algo puramente numérico (ex.: "50.000"),
+        # consideramos que não é uma URL real, e sim um número.
+        if re.fullmatch(r"[0-9]+([.,][0-9]+)?", s_numeric_candidate):
+            return True
+
+        return False
+
+    filtered_urls: List[str] = []
+    for url in urls:
+        if is_spurious_url(url):
+            # NÃO remover do texto, NÃO adicionar em extracted_urls
+            continue
+        # Só remove e guarda o que for URL "de verdade"
+        filtered_urls.append(url)
+        text = text.replace(url, "")
+
+    return text.strip(), filtered_urls
+
+    """
+    Remove URLs from text and return both cleaned text and extracted URLs.
     
     Args:
         text: Input text
