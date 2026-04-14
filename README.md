@@ -287,7 +287,7 @@ Este framework suporta os seguintes conjuntos de dados em português brasileiro:
 
 - [**FakeWhatsAppBR**](https://github.com/cabrau/FakeWhatsApp.Br): Corpus anotado e anonimizado de mensagens públicas de WhatsApp em português brasileiro, criado para estudos de detecção automática de desinformação textual e identificação de usuários maliciosos. O conjunto foi compilado durante as eleições presidenciais brasileiras de 2018, a partir de grupos públicos.
 
-- [**Fake news in Portuguese**](www.kaggle.com/datasets/fabioselau/fakes-news-portuguese): Corpus de notícias em português brasileiro rotuladas como falsas ou verdadeiras, publicado no Kaggle. O conjunto foi construído a partir de notícias coletadas na web entre 2005 e 2022, organizadas em dois arquivos (`fake.csv` e `true.csv`).
+- [**Fake news in Portuguese**](https://www.kaggle.com/datasets/fabioselau/fakes-news-portuguese): Corpus de notícias em português brasileiro rotuladas como falsas ou verdadeiras, publicado no Kaggle. O conjunto foi construído a partir de notícias coletadas na web entre 2005 e 2022, organizadas em dois arquivos (`fake.csv` e `true.csv`).
 
 - [**LLM4BrazilianFakeNews**](https://github.com/GoloMarcos/LLM4BrazilianFakeNews): Corpus de notícias políticas brasileiras criado para avaliar o desempenho de modelos de linguagem de larga escala (LLMs) — tanto open-source quanto proprietários — na detecção de desinformação textual. O conjunto foi proposto em um estudo que investiga a eficácia de LLMs na identificação de fake news sobre política nacional, destacando o potencial de modelos abertos como alternativa aos comerciais.
 
