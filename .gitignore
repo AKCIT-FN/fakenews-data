@@ -32,3 +32,4 @@ data/
 *.csv
 !tests/**/*.csv
 kaggle.json
+README_pt.md
