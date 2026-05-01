@@ -10,7 +10,7 @@ _Framework_ for collecting, processing, and analyzing disinformation datasets wi
 ## Installation
 
 ```bash
-pip install git+https://github.com/Vrt-sources/fakenews-data
+pip install git+{repository_url}
 ```
 
 **Installation Extras**
@@ -23,21 +23,12 @@ pip install "fakenews-br-data[extra]"
 Currently, there are two main extras: `huggingface` and `dev`.
 
 - `fakenews-br-data[huggingface]`: Adds dependencies used in download/integration workflows with datasets hosted on the Hugging Face stack.
-    - Installation from PyPI:
-        ```bash
-        pip install "fakenews-br-data[huggingface]"
-        ```
-    - Development mode installation (from a cloned repository):
+    - Installation from a cloned repository:
         ```bash
         pip install -e ".[huggingface]"
         ```
-  
 - `fakenews-br-data[dev]`: Groups dependencies focused on project development, such as testing tools and code formatting.
-    - Installation from PyPI:
-        ```bash
-        pip install "fakenews-br-data[dev]"
-        ```
-    - Development mode installation (from a cloned repository):
+    - Installation from a cloned repository:
         ```bash
         pip install -e ".[dev]"
         ```
