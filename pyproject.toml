@@ -2,16 +2,6 @@
 requires = ["hatchling >= 1.26"]
 build-backend = "hatchling.build"
 
-[project]
-name = "fakenews-br-data"
-version = "0.1.5"
-authors = [
-  { name="Kauan Divino Pouso Mariano", email="kauan.divino@discente.ufg.br" },
-  { name="Fabrycio Leite Nakano Almada", email="fabrycio.almada@discente.ufg.br" },
-  { name="Maykon Adriell Dutra", email="maykon.dutra@discente.ufg.br" },
-  { name="Victor Emanuel da Silva Monteiro", email="victor_emanuel@discente.ufg.br" },
-  { name="Juliana Resplande Sant'Anna Gomes", email="juliana.resplande@discente.ufg.br" },
-]
 description = "Brazilian fake news dataset collection, processing, and analysis toolkit"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -47,7 +37,4 @@ huggingface = ["gdown>=5.0.0"]
 [project.scripts]
 fakenews-br-data = "fakenews_br_data.cli:main"
 
-[project.urls]
-Homepage = "https://github.com/kauandivino/fakenews-data"
-Issues = "https://github.com/kauandivino/fakenews-data/issues"
 
