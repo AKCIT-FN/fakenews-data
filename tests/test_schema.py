@@ -4,7 +4,7 @@ from fakenews_br_data.schema import ensure_schema, assign_uids
 
 
 def test_ensure_schema_basic_mapping():
-    """ensure_schema deve mapear colunas básicas e normalizar label/data."""
+    """ensure_schema should map basic columns and normalize label/date."""
     df_raw = pd.DataFrame(
         {
             "id": [1, 2],
@@ -22,7 +22,7 @@ def test_ensure_schema_basic_mapping():
         source_description="Teste unitário Fake.br",
     )
 
-    # Colunas obrigatórias
+    # Required columns
     for col in [
         "orig_id",
         "text",
@@ -41,12 +41,12 @@ def test_ensure_schema_basic_mapping():
     assert (out["source_type"] == "news").all()
     assert (out["source_description"] == "Teste unitário Fake.br").all()
 
-    # Mapeamento de texto e label
+    # Mapping of text and label
     assert out.loc[0, "text"] == "Notícia falsa"
     assert out.loc[1, "text"] == "Notícia verdadeira"
     assert set(out["label"].unique()) == {"fake", "true"}
 
-    # Normalização de data -> ISO
+    # Date normalization -> ISO
     assert out.loc[0, "date_iso"] == "2024-01-10"
     assert out.loc[1, "date_iso"] == "2024-01-10"
 
@@ -61,6 +61,6 @@ def test_assign_uids_sequential():
     assert len(dfs_with_uid) == 2
     uids = pd.concat(dfs_with_uid)["uid"].tolist()
 
-    # Deve começar em 1 e ser sequencial
+    # Should start at 1 and be sequential
     assert uids == [1, 2, 3]
     assert len(set(uids)) == 3

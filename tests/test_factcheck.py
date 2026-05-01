@@ -4,7 +4,7 @@ from fakenews_br_data.factcheck import FactChecker
 
 
 def test_check_claim_empty_text_returns_nones():
-    """check_claim deve retornar campos None quando o texto é vazio ou inválido."""
+    """check_claim should return None fields when the text is empty or invalid."""
     fc = FactChecker(
         api_key="DUMMY",
         max_workers=1,
@@ -25,8 +25,8 @@ def test_check_claim_empty_text_returns_nones():
 
 def test_run_factcheck_and_join_with_sqlite(monkeypatch, tmp_path):
     """
-    Testa o fluxo run_factcheck_streaming + join_with_sqlite usando um stub
-    de check_claim, sem chamadas reais à API externa.
+    Tests the run_factcheck_streaming + join_with_sqlite pipeline using a stub
+    for check_claim, without real external API calls.
     """
     input_csv = tmp_path / "input.csv"
     df_in = pd.DataFrame(
@@ -44,9 +44,9 @@ def test_run_factcheck_and_join_with_sqlite(monkeypatch, tmp_path):
         show_progress_bar=False,
     )
 
-    # Stub de check_claim para evitar chamada HTTP real
+    # Stub for check_claim to avoid real HTTP calls
     def fake_check_claim(self, text):
-        suffix = text.split()[-1]  # "teste"
+        suffix = text.split()[-1]  # "test"
         return {
             "factcheck_rating": f"rating_{suffix}",
             "factcheck_claimant": "claimant_stub",
@@ -58,11 +58,11 @@ def test_run_factcheck_and_join_with_sqlite(monkeypatch, tmp_path):
     tmp_dir = tmp_path / "tmp"
     tmp_dir.mkdir()
 
-    # 1) Streaming: gera factcheck_tmp.csv
+    # 1) Streaming: generates factcheck_tmp.csv
     tmp_csv = fc.run_factcheck_streaming(str(input_csv), str(tmp_dir))
     tmp_df = pd.read_csv(tmp_csv)
 
-    # Verifica colunas e número de linhas
+    # Check columns and number of rows
     assert set(tmp_df.columns) == {
         "rid",
         "orig_id",
@@ -72,20 +72,20 @@ def test_run_factcheck_and_join_with_sqlite(monkeypatch, tmp_path):
     }
     assert len(tmp_df) == 2
 
-    # 2) JOIN com o dataset original via SQLite
+    # 2) JOIN with the original dataset via SQLite
     output_csv = tmp_path / "output.csv"
     fc.join_with_sqlite(str(input_csv), tmp_csv, str(output_csv), str(tmp_dir))
 
     out_df = pd.read_csv(output_csv)
 
-    # Deve preservar as colunas originais
+    # Should preserve the original columns
     for col in ["orig_id", "text"]:
         assert col in out_df.columns
 
-    # Deve adicionar colunas de fact-check
+    # Should add fact-check columns
     for col in ["factcheck_rating", "factcheck_claimant", "factcheck_url"]:
         assert col in out_df.columns
         assert out_df[col].notna().all()
 
-    # Ordem dos orig_id deve ser preservada
+    # The order of orig_id must be preserved
     assert out_df["orig_id"].astype(str).tolist() == ["1", "2"]

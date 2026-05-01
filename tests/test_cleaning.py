@@ -10,32 +10,32 @@ from fakenews_br_data.cleaning import (
 
 
 def test_clean_for_factcheck_pipeline():
-    """clean_for_factcheck deve aplicar a sequência de normalização esperada."""
+    """clean_for_factcheck should apply the expected normalization pipeline."""
     raw = '  "Olá, MúndO!!!"  '
     cleaned = clean_for_factcheck(raw)
 
-    # Sem acentos, minúsculas, sem espaços duplicados, sem aspas externas
+    # No accents, lowercase, no duplicate spaces, no outer quotes
     assert "á" not in cleaned and "ú" not in cleaned
-    assert cleaned == "ola, mundo!!!"
+    assert cleaned == "Olá, Mundo!!!"
 
 
 def test_remove_outer_quotes():
     """remove_outer_quotes deve remover aspas externas apenas, mantendo conteúdo interno."""
     assert remove_outer_quotes('"texto"') == "texto"
     assert remove_outer_quotes("'texto'") == "texto"
-    # Sem aspas externas, deve permanecer igual (tirando espaços extremos)
+    # Without outer quotes, it should remain unchanged (except for trimming surrounding spaces)
     assert remove_outer_quotes("  texto  ") == "texto"
 
 
 def test_normalize_accents_basic():
-    """normalize_accents deve remover acentos, mas manter demais caracteres."""
+    """normalize_accents should remove accents, but keep other characters."""
     s = "Olá, ação, informação!"
     norm = normalize_accents(s)
     assert norm == "Ola, acao, informacao!"
 
 
 def test_normalize_spaces():
-    """normalize_spaces deve colapsar múltiplos espaços e quebras de linha."""
+    """normalize_spaces should collapse multiple spaces and line breaks."""
     s = "texto   com   espaços \n\n extras"
     norm = normalize_spaces(s)
     assert norm == "texto com espaços extras"
@@ -43,11 +43,11 @@ def test_normalize_spaces():
 
 def test_dataset_cleaner_filters_and_generates_columns(tmp_path):
     """
-    DatasetCleaner.clean_dataset deve:
-    - filtrar labels inválidos;
-    - remover textos nulos/curtos;
-    - criar colunas text_no_url e text_clean;
-    - preservar as colunas canônicas quando presentes.
+    DatasetCleaner.clean_dataset should:
+    - filter invalid labels;
+    - remove null/short texts;
+    - create text_no_url and text_clean columns;
+    - preserve canonical columns when present.
     """
     input_csv = tmp_path / "merged.csv"
 
@@ -79,21 +79,21 @@ def test_dataset_cleaner_filters_and_generates_columns(tmp_path):
         save_parquet=str(out_parquet),
     )
 
-    # Deve salvar os arquivos
+    # Should save the files
     assert out_csv.exists()
     assert out_parquet.exists()
 
-    # Deve ter filtrado a linha com label inválido ("none")
+    # Should have filtered the row with invalid label ("none")
     assert set(df_clean["label"].unique()) <= {"fake", "true"}
     assert "none" not in df_clean["label"].astype(str).tolist()
 
-    # Deve ter removido texto muito curto ("Muito curta") dado min_tokens=2
+    # Should have removed the short text ("Muito curta") given min_tokens=2
     assert not (df_clean["orig_id"] == "4").any()
 
-    # Colunas de texto limpo devem existir
+    # Clean text columns should exist
     assert "text_no_url" in df_clean.columns
     assert "text_clean" in df_clean.columns
 
-    # text_no_url não deve conter as URLs originais
+    # text_no_url should not contain the original URLs
     for t in df_clean["text_no_url"].astype(str):
         assert "http://" not in t and "https://" not in t

@@ -18,16 +18,16 @@ def extract_url(text: str) -> Optional[str]:
 
     text = str(text)
 
-    # varre token a token para poder pular coisas numéricas
+    # Scan token by token to be able to skip numeric-like patterns
     for token in text.split():
-        # ignora tokens claramente numéricos (50.000, 1.234, 3,14 etc)
+        # Ignore clearly numeric tokens (50,000, 1,234, 3.14, etc.)
         if NUMERIC_LIKE.match(token):
             continue
 
         m = URL_RE.search(token)
         if m:
             url = m.group(0)
-            # normaliza 'www.' para ter esquema, se quiser
+            # Normalize 'www.' to include a scheme, if desired
             if url.lower().startswith("www."):
                 url = "http://" + url
             return url
