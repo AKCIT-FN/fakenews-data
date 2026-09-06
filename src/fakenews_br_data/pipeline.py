@@ -1,4 +1,4 @@
-"""Main pipeline orchestration for dataset processing."""
+# Main pipeline orchestration for dataset processing.
 
 import os
 import json
